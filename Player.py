@@ -45,12 +45,15 @@ class Player:
     self.fold = value
   
   def setHand(self,card):
-    self.hand = self.hand.append(card)
+    self.hand.append(card)
   
   def resetPlayer(self):
     self.hand = []
     self.fold = False
     self.communityCards = []
+    
+  def printHand(self):
+    return ' '.join(str(card) for card in self.hand)
     
   
   

@@ -1,4 +1,5 @@
 import Player
+import random
 
 class Game:
   players = []
@@ -24,7 +25,7 @@ class Game:
     player1 = Player.Player()
     player2 = Player.Player()
     player1.init(1,"varun",500)
-    player2.init(2,"bot",45)
+    player2.init(2,"bot",500)
     self.addPlayer(player1)
     self.addPlayer(player2)
     self.state = 0
@@ -32,14 +33,18 @@ class Game:
   
   def playGame(self):
     if(self.state == 0):
+      self.initialiseRound()
       print("collecting buy ins")
-      self.collectBuyIns(50)
+      self.collectBuyIns(5)
       self.state = 1
+      
     if(self.state == 1):
-      print("successful so far")
+      self.dealCards()
+      for player in self.players:
+        print("Player "+player.name+"'s hand is: "+ player.printHand())
   
   def initialiseRound(self):
-    cards = self.spades + self.hearts + self.clubs + self.diamonds
+    self.cards = self.spades + self.hearts + self.clubs + self.diamonds
     for player in self.players:
       player.resetPlayer()
     
@@ -55,6 +60,17 @@ class Game:
         print("Player "+player.name+" cannot afford buy in, kicked out")
         self.players.remove(player)
   
+  def dealCards(self):
+    for player in self.players:
+      index1 = random.randint(0,len(self.cards)-1)
+      card1 = self.cards[index1]
+      self.cards.remove(card1)
+      index2 = random.randint(0,len(self.cards)-1)
+      card2 = self.cards[index2]
+      player.setHand(card1)
+      player.setHand(card2)
+  
+    
   
     
   
