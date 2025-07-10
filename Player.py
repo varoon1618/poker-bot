@@ -47,6 +47,9 @@ class Player:
   def setHand(self,card):
     self.hand.append(card)
   
+  def setCommunityCards(self,community):
+    self.communityCards = community
+  
   def resetPlayer(self):
     self.hand = []
     self.fold = False

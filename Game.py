@@ -3,6 +3,7 @@ import random
 
 class Game:
   players = []
+  communityCards = []
   spades = ["s1","s2","s3","s4","s5","s6","s7","s8","s9","s10","s11","s12","s13"]
   hearts = ["h1","h2","h3","h4","h5","h6","h7","h8","h9","h10","h11","h12","h13"]
   clubs = ["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10","c11","c12","c13"]
@@ -17,7 +18,7 @@ class Game:
     
   def main(self):
     self.initialiseGame()
-    while(self.state<2):
+    while(self.state<9):
       self.playGame()
   
   
@@ -39,15 +40,33 @@ class Game:
       self.state = 1
       
     if(self.state == 1):
+      self.previousBet = 5
       self.dealCards()
       for player in self.players:
         print("Player "+player.name+"'s hand is: "+ player.printHand())
       self.state = 2
     
-    if(self.state==2):
+    if(self.state in [2,4,6,8]):
+      self.previousBet = 5
       self.collectBets()
-      print("total pot: ",self.pot)
-  
+      #print("total pot: ",self.pot)
+      self.state +=1
+    
+    if(self.state==3):
+      self.previousBet = 5
+      self.dealFlop()
+      print("flop: "+ ' '.join(str(card) for card in self.communityCards))
+      self.state=4
+      
+    if (self.state==5 or self.state==7):
+      self.previousBet = 5
+      self.dealRandomCard()
+      self.state += 1
+      
+    if (self.state == 9):
+      print("showdown")
+    
+    
   def initialiseRound(self):
     self.cards = self.spades + self.hearts + self.clubs + self.diamonds
     self.pot = 0
@@ -68,13 +87,13 @@ class Game:
   
   def dealCards(self):
     for player in self.players:
-      index1 = random.randint(0,len(self.cards)-1)
-      card1 = self.cards[index1]
-      self.cards.remove(card1)
-      index2 = random.randint(0,len(self.cards)-1)
-      card2 = self.cards[index2]
+      indexes = random.sample(range(0,len(self.cards)),2)
+      index1,index2 = indexes[0],indexes[1]
+      card1,card2 = self.cards[index1],self.cards[index2]
       player.setHand(card1)
       player.setHand(card2)
+      self.cards.remove(card1)
+      self.cards.remove(card2)
   
   
   def collectBets(self):
@@ -98,7 +117,26 @@ class Game:
         player.bet(self.previousBet)
         self.pot = self.pot + self.previousBet
   
+  def dealFlop(self):
+    indexes = random.sample(range(0,len(self.cards)),3)
+    index1,index2,index3= indexes[0],indexes[1],indexes[2]
+    card1,card2,card3 = self.cards[index1],self.cards[index2], self.cards[index3]
+    self.communityCards.extend([card1,card2,card3])
+    self.cards.remove(card1)
+    self.cards.remove(card2)
+    self.cards.remove(card3)
+    for player in self.players:
+      player.setCommunityCards(self.communityCards)
   
+  def dealRandomCard(self):
+    index = random.randint(0,len(self.cards)-1)
+    card = self.cards[index]
+    self.communityCards.append(card)
+    self.cards.remove(card)
+    for player in self.players:
+      player.setCommunityCards(self.communityCards)
+  
+    
     
   
     
