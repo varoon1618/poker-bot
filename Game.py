@@ -11,13 +11,13 @@ class Game:
   state = -1
   stateDict = {0:'buy in',1:'deal cards',2:'bet',3:'flop',4:'bet',
                5: 'turn', 6: 'bet', 7:'river',8:'bet',9:'showdown',10:'winner' }
-  
+  previousBet = 5
   pot = 0
   
     
   def main(self):
     self.initialiseGame()
-    while(self.state<1):
+    while(self.state<2):
       self.playGame()
   
   
@@ -42,9 +42,15 @@ class Game:
       self.dealCards()
       for player in self.players:
         print("Player "+player.name+"'s hand is: "+ player.printHand())
+      self.state = 2
+    
+    if(self.state==2):
+      self.collectBets()
+      print("total pot: ",self.pot)
   
   def initialiseRound(self):
     self.cards = self.spades + self.hearts + self.clubs + self.diamonds
+    self.pot = 0
     for player in self.players:
       player.resetPlayer()
     
@@ -69,6 +75,29 @@ class Game:
       card2 = self.cards[index2]
       player.setHand(card1)
       player.setHand(card2)
+  
+  
+  def collectBets(self):
+    for player in self.players:
+      if(player.name == "varun"):
+        print("What is your next move ?")
+        print("Previous bet: ",self.previousBet)
+        print("Type 1 to fold, 2 to match previous bet, 3 to raise")
+        n = int(input("Enter Value: "))
+        if(n==1):
+          player.fold = True
+        if(n==2):
+          player.bet(self.previousBet)
+          self.pot = self.pot + self.previousBet
+        else:
+          bet = int(input("Enter how much do you want to bet: "))
+          player.bet(bet)
+          self.previousBet = bet
+          self.pot = self.pot + bet
+      else:
+        player.bet(self.previousBet)
+        self.pot = self.pot + self.previousBet
+  
   
     
   
