@@ -4,12 +4,14 @@ class Player:
   money = -1
   fold = False
   hand = []
+  type = ""
   communityCards = []
   
-  def init(self,playerID,name,money):
+  def init(self,playerID,name,money,type):
     self.playerID = playerID
     self.name = name
     self.money = money
+    self.type = type
   
   def bet(self,bet):
     if(bet<self.money):

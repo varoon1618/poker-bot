@@ -6,10 +6,6 @@ TO DO:
 
 Add big blind, small blind -make sure it rotates each round
 
-Calculate different ways of winning/who won
-
-Keepingtrack of who folded, who is playing , who is totally out of table(doesnt have enough money)
-
 Add frontend 
 
 Any bugs ?
@@ -31,25 +27,23 @@ class Game:
   pot = 0
   
   
-  def main(self):
-    self.initialiseGame()
-    while(self.state<11):
-      self.playGame()
-  
-  
-  def initialiseGame(self):
+  def __init__(self,gui,action_queue):
+    self.gui = gui
+    self.action_queue = action_queue
     player1 = Player.Player()
     player2 = Player.Player()
-    player1.init(1,"varun",500)
-    player2.init(2,"bot",500)
+    player1.init(1,"varun",500,"human")
+    player2.init(2,"bot",500,"bot")
     self.addPlayer(player1)
     self.addPlayer(player2)
     self.state = 0
+  
     
   
   def playGame(self):
     if(self.state == 0):
       self.initialiseRound()
+      self.gui.update_status("Collecting Buy Ins")
       print("collecting buy ins")
       self.collectBuyIns(5)
       self.state = 1
@@ -64,7 +58,8 @@ class Game:
     if(self.state in [2,4,6,8]):
       self.previousBet = 5
       self.collectBets()
-      #print("total pot: ",self.pot)
+      self.gui.update_status("Place your bets")
+      print("total pot: ",self.pot)
       if(not(self.checkGameOver())):
         self.state +=1
       else:
@@ -90,7 +85,9 @@ class Game:
       self.state +=1
     
     if (self.state==10):
-      print("The winner is: ", self.calculateWinner())
+      winner  = self.calculateWinner()
+      print("The winner is: ", winner)
+      self.gui.update_status("The winner is: ",winner )
       self.state = 11
     
   def initialiseRound(self):
@@ -123,26 +120,41 @@ class Game:
   
   
   def collectBets(self):
-    for player in [p for p in self.players if not(p.fold)]:
-      if(player.name == "varun"):
-        print("What is your next move ?")
-        print("Previous bet: ",self.previousBet)
-        print("Type 1 to fold, 2 to match previous bet, 3 to raise")
-        n = int(input("Enter Value: "))
-        if(n==1):
-          player.fold = True
-        if(n==2):
-          player.bet(self.previousBet)
-          self.pot = self.pot + self.previousBet
-        else:
-          bet = int(input("Enter how much do you want to bet: "))
-          player.bet(bet)
-          self.previousBet = bet
-          self.pot = self.pot + bet
-      else:
-        player.bet(self.previousBet)
-        self.pot = self.pot + self.previousBet
+    activePlayers = [p for p in self.players if not p.fold]
+    self.betIndex = 0
+    if self.betIndex >= len(activePlayers):
+      return
+    
+    player = activePlayers[self.betIndex]
+    if(player.type == "human"):
+      print("What is your next move ?")
+      self.gui.update_move("What is your next move ?")
+      self.gui.update_previousBet(self.previousBet)
+      self.updateBetsUI(player)
+    else:
+      player.bet(self.previousBet)
+      self.pot += self.previousBet
+      self.betIndex += 1
+      self.gui.master.after(100)
   
+  def updateBetsUI(self,player):
+    if not self.action_queue.empty():
+      print("bello")
+      action = self.action_queue.get()
+      if(action["action"] == "fold"):
+        player.fold = True
+      if(action["action"] == "call"):
+        player.bet(self.previousBet)
+        self.pot += self.previousBet
+        self.gui.update_pot(self.pot)
+      else:
+        bet = 10
+        player.bet(bet)
+        self.previousBet = bet
+        self.pot += bet
+    else:
+      self.gui.master.after(100, lambda: self.updateBetsUI(player))
+    
   def dealFlop(self):
     indexes = random.sample(range(0,len(self.cards)),3)
     index1,index2,index3= indexes[0],indexes[1],indexes[2]
