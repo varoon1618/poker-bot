@@ -30,7 +30,7 @@ class Game:
   previousBet = 5
   pot = 0
   
-    
+  
   def main(self):
     self.initialiseGame()
     while(self.state<11):
@@ -173,12 +173,19 @@ class Game:
       return remainingPlayers[0].name
     else:
       scores = [self.scoreHand(p) for p in remainingPlayers]
-      maximum = max(scores)
-      if(scores.count(maximum) ==1):
-        return remainingPlayers[scores.index(maximum)].name
+      highest = max(scores)
+      if(scores.count(highest) ==1):
+        return remainingPlayers[scores.index(highest)].name
       else:
-        print("NEED TO IMPLEMENT")
-        return("ABC")
+        print("Tie Breaker")
+        tiebreaker = [remainingPlayers[i] for i, score in enumerate(scores) if score == highest]
+        # Find the player with the highest card value
+        def get_highest_card(player):
+            all_cards = player.hand + self.communityCards
+            values = [int(c[1:]) for c in all_cards]
+            return max(values)
+        winner = max(tiebreaker, key=get_highest_card)
+        return winner.name
   
   def scoreHand(self,player):
     if self.isSameSuit(player):
@@ -213,8 +220,6 @@ class Game:
   
   def isSameSuit(self, player):
     cards = player.hand + self.communityCards
-    if not cards:
-      return False
     suits = [card[0] for card in cards]
     first_suit = suits[0]
     return all(suit == first_suit for suit in suits)
