@@ -38,7 +38,6 @@ class Game:
     self.addPlayer(player2)
     self.state = 0
   
-    
   
   def playGame(self):
     if(self.state == 0):
@@ -46,43 +45,34 @@ class Game:
       self.gui.update_status("Collecting Buy Ins")
       print("collecting buy ins")
       self.collectBuyIns(5)
-      self.state = 1
       
     if(self.state == 1):
       self.previousBet = 5
       self.dealCards()
       for player in self.players:
         print("Player "+player.name+"'s hand is: "+ player.printHand())
-      self.state = 2
     
     if(self.state in [2,4,6,8]):
       self.previousBet = 5
-      self.collectBets()
       self.gui.update_status("Place your bets")
-      print("total pot: ",self.pot)
-      if(not(self.checkGameOver())):
-        self.state +=1
-      else:
-        self.state=10
-    
+      self.collectBets(done_callback=self.afterBets)
+      
     if(self.state==3):
       self.previousBet = 5
       self.dealFlop()
       print("flop: "+ ' '.join(str(card) for card in self.communityCards))
-      self.state=4
       
     if (self.state==5 or self.state==7):
       self.previousBet = 5
       self.dealRandomCard()
       print('community cards: ', " ".join(str(card) for card in self.communityCards))
-      self.state += 1
       
     if (self.state == 9):
       for player in [p for p in self.players if not(p.fold)]:
         print(player.name,'has hand: ',player.printHand())
-      
       print('community cards: ', " ".join(str(card) for card in self.communityCards))
       self.state +=1
+      self.playGame()
     
     if (self.state==10):
       winner  = self.calculateWinner()
@@ -107,6 +97,8 @@ class Game:
       else:
         print("Player "+player.name+" cannot afford buy in, kicked out")
         self.players.remove(player)
+    self.state = 1
+    self.playGame()
   
   def dealCards(self):
     for player in self.players:
@@ -117,43 +109,58 @@ class Game:
       player.setHand(card2)
       self.cards.remove(card1)
       self.cards.remove(card2)
-  
-  
-  def collectBets(self):
-    activePlayers = [p for p in self.players if not p.fold]
-    self.betIndex = 0
-    if self.betIndex >= len(activePlayers):
-      return
     
-    player = activePlayers[self.betIndex]
-    if(player.type == "human"):
-      print("What is your next move ?")
-      self.gui.update_move("What is your next move ?")
-      self.gui.update_previousBet(self.previousBet)
-      self.updateBetsUI(player)
-    else:
-      player.bet(self.previousBet)
-      self.pot += self.previousBet
-      self.betIndex += 1
-      self.gui.master.after(100)
+    self.state = 2
+    self.playGame()
   
-  def updateBetsUI(self,player):
-    if not self.action_queue.empty():
-      print("bello")
-      action = self.action_queue.get()
-      if(action["action"] == "fold"):
-        player.fold = True
-      if(action["action"] == "call"):
-        player.bet(self.previousBet)
-        self.pot += self.previousBet
-        self.gui.update_pot(self.pot)
+  def collectBets(self, done_callback = None):
+      self.activePlayers = [p for p in self.players if not p.fold]
+      self.betIndex = 0
+      self._process_next_bet(done_callback)
+
+  def _process_next_bet(self,done_callback):
+      if self.betIndex >= len(self.activePlayers):
+        if done_callback:
+          done_callback()
+          return
+      player = self.activePlayers[self.betIndex]
+      if player.type == "human":
+        print("Waiting for player: ",player.name)
+        # Check the queue for an action
+        if not self.action_queue.empty():
+          print("not empty")
+          action = self.action_queue.get()
+          if(action["action"] == "fold"):
+            player.fold = True
+          if(action["action"] == "call"):
+            player.bet(self.previousBet)
+            self.pot += self.previousBet
+            self.gui.update_pot(self.pot)
+          
+          self.betIndex += 1
+          print("current bet index: ",self.betIndex)
+          self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+        else:
+          print("emptier than your brain")
+          self.gui.update_move("Waiting for your move...")
+          self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
       else:
-        bet = 10
-        player.bet(bet)
-        self.previousBet = bet
-        self.pot += bet
+        player.bet(self.previousBet)
+        self.pot +=  self.previousBet
+        # Process bot action here if needed
+        self.betIndex += 1
+        print("current bet index: ",self.betIndex)
+        self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+  
+  def afterBets(self):
+    print("total pot: ",self.pot)
+    if(not(self.checkGameOver())):
+      self.state +=1
     else:
-      self.gui.master.after(100, lambda: self.updateBetsUI(player))
+      self.state=10
+    print("game state:", self.state)
+    self.playGame()
+
     
   def dealFlop(self):
     indexes = random.sample(range(0,len(self.cards)),3)
@@ -165,6 +172,8 @@ class Game:
     self.cards.remove(card3)
     for player in self.players:
       player.setCommunityCards(self.communityCards)
+    self.state=4
+    self.playGame()
   
   def dealRandomCard(self):
     index = random.randint(0,len(self.cards)-1)
@@ -173,6 +182,8 @@ class Game:
     self.cards.remove(card)
     for player in self.players:
       player.setCommunityCards(self.communityCards)
+    self.state += 1
+    self.playGame()
   
   def checkGameOver(self):
     if(len([p for p in self.players if not(p.fold)]) == 1):
