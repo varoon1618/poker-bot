@@ -36,14 +36,18 @@ class Game:
     player2 = Player.Player()
     player3 = Player.Player()
     player4 = Player.Player()
+    player5 = Player.Player()
     player1.init(1,"varun",500,"human")
     player2.init(2,"bot1",500,"bot")
     player3.init(3,"bot2",500,"bot")
     player4.init(4,"bot3",500,"bot")
-    self.addPlayer(player1)
+    player5.init(5,"bot4",500,"bot")
+    
     self.addPlayer(player2)
     self.addPlayer(player3)
+    self.addPlayer(player1)
     self.addPlayer(player4)
+    self.addPlayer(player5)
     self.state = 0
   
   
@@ -123,43 +127,48 @@ class Game:
     self.playGame()
   
   def collectBets(self, done_callback = None):
-      self.activePlayers = [p for p in self.players if not p.fold]
-      self.betIndex = 0
-      self._process_next_bet(done_callback)
+    self.activePlayers = [p for p in self.players if not p.fold]
+    self.betIndex = 0
+    self._process_next_bet(done_callback)
 
   def _process_next_bet(self, done_callback):
     
-      if self.callBackId:  # Cancel any pending after()
-          self.gui.master.after_cancel(self.callBackId)
-          self.callBackId = None
+    print(f"function called at {datetime.datetime.now().strftime('%H:%M:%S')}")
+    
+    if self.callBackId:  # Cancel any pending after()
+      print("cancelling callback")
+      self.gui.master.after_cancel(self.callBackId)
+      self.callBackId = None
 
-      if self.betIndex >= len(self.activePlayers):
-          if done_callback:
-              self.gui.master.after(3000,lambda: done_callback())
-          return
+    if self.betIndex >= len(self.activePlayers):
+      if done_callback:
+          self.gui.master.after(3000,lambda: done_callback())
+      return
 
-      player = self.activePlayers[self.betIndex]
-      
-      if player.type == "human":
-          self.gui.update_playerTurn(True)
-          if not self.action_queue.empty():
-              action = self.action_queue.get()
-              if action["action"] == "fold":
-                  player.fold = True
-              elif action["action"] == "call":
-                  player.bet(self.previousBet)
-                  self.pot += self.previousBet
-                  self.gui.update_pot(self.pot)
-                  self.gui.update_move("you called")
-              self.gui.update_playerTurn(False)
-              self.betIndex += 1
-              self.callBackId = self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
-          else:
-              self.gui.update_move("Waiting for your move...")
-              self.callBackId = self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+    player = self.activePlayers[self.betIndex]
+    
+    if player.type == "human":
+      #print("HUMAN ")
+      self.gui.update_playerTurn(True)
+      if not self.action_queue.empty():
+        action = self.action_queue.get()
+        if action["action"] == "fold":
+          player.fold = True
+        elif action["action"] == "call":
+          player.bet(self.previousBet)
+          self.pot += self.previousBet
+          self.gui.update_pot(self.pot)
+          self.gui.update_move("you called")
+        
+        self.gui.update_playerTurn(False)
+        self.betIndex += 1
+        self.callBackId = self.gui.master.after(500, lambda: self._process_next_bet(done_callback))
       else:
-          # Wait 3s before processing bot
-          self.callBackId = self.gui.master.after(3000, lambda: self.processBotAction(player, done_callback))
+        self.gui.update_move("Waiting for your move...")
+        self.callBackId = self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+    else:
+      #self.callBackId = self.gui.master.after(3000, lambda: self.processBotAction(player, done_callback))
+      self.processBotAction(player, done_callback)
 
   def processBotAction(self, player, done_callback):
       print(f"{player.name} acting at {datetime.datetime.now().strftime('%H:%M:%S')}")
@@ -168,7 +177,7 @@ class Game:
       self.pot += self.previousBet
       self.gui.update_pot(self.pot)
       self.betIndex += 1
-      self._process_next_bet(done_callback)
+      self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
   
   
   def afterBets(self):
@@ -295,7 +304,12 @@ class Game:
     values = [int(c[1:]) for c in cards]
     counts = [values.count(v) for v in values]
     return int(counts.count(3)/3)
-    
+  
+  def isRoyalFlush(self,player):
+    cards = player.hand+ self.communityCards
+    values = [int(c[1:]) for c in cards]
+    return set(values) == {1,10,11,12,13} and self.isSameSuit(cards)
+
   '''
   Royal FLush - A,K,Q,J,10 - all same suite
   
