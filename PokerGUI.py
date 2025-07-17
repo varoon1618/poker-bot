@@ -3,6 +3,7 @@ from tkinter import messagebox
 
 class PokerGUI:
     def __init__(self, master,action_queue):
+      self.playerTurn = False
       self.action_queue = action_queue
       self.master = master
       master.title("Poker Game")
@@ -37,15 +38,15 @@ class PokerGUI:
 
       self.pot_label = ctk.CTkLabel(self.master, text="Pot: $0")
       self.pot_label.pack(pady=5)
-
+      
       self.action_frame = ctk.CTkFrame(self.master)
-      self.action_frame.pack(pady=20)
       self.fold_button = ctk.CTkButton(self.action_frame, text="Fold", command=self.fold)
       self.fold_button.grid(row=0, column=0, padx=10)
       self.call_button = ctk.CTkButton(self.action_frame, text="Call", command=self.call)
       self.call_button.grid(row=0, column=1, padx=10)
       self.raise_button = ctk.CTkButton(self.action_frame, text="Raise", command=self.raise_bet)
       self.raise_button.grid(row=0, column=2, padx=10)
+      
 
     def minimize_window(self):
         self.master.iconify()
@@ -61,7 +62,14 @@ class PokerGUI:
     
     def update_hand(self, hand):
         self.player_hand_cards.configureure(text=" ".join(hand))
-
+    
+    def update_playerTurn(self,playerTurn):
+      self.playerTurn = playerTurn
+      if playerTurn:
+        self.action_frame.pack(pady=20)
+      else:
+        self.action_frame.pack_forget()
+    
     def update_community(self, cards):
         self.community_cards.configure(text=" ".join(cards))
 
@@ -73,11 +81,11 @@ class PokerGUI:
 
     def fold(self):
       self.action_queue.put({"action":"fold","playerName":"human","amount":0})
-      self.update_status("You folded")
+      #self.update_status("You folded")
     
     def call(self):
       self.action_queue.put({"action":"call","playerName":"human","amount":0}) #amt = 0, because prev bet stored in game.py
-      self.update_status("You called.")
+      #self.update_status("You called.")
       
 
     def raise_bet(self):

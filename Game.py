@@ -1,5 +1,6 @@
 import Player
 import random
+import datetime
 
 '''
 TO DO:
@@ -28,14 +29,21 @@ class Game:
   
   
   def __init__(self,gui,action_queue):
+    self.callBackId = None
     self.gui = gui
     self.action_queue = action_queue
     player1 = Player.Player()
     player2 = Player.Player()
+    player3 = Player.Player()
+    player4 = Player.Player()
     player1.init(1,"varun",500,"human")
-    player2.init(2,"bot",500,"bot")
+    player2.init(2,"bot1",500,"bot")
+    player3.init(3,"bot2",500,"bot")
+    player4.init(4,"bot3",500,"bot")
     self.addPlayer(player1)
     self.addPlayer(player2)
+    self.addPlayer(player3)
+    self.addPlayer(player4)
     self.state = 0
   
   
@@ -77,7 +85,7 @@ class Game:
     if (self.state==10):
       winner  = self.calculateWinner()
       print("The winner is: ", winner)
-      self.gui.update_status("The winner is: ",winner )
+      self.gui.update_status("The winner is: " +str(winner) )
       self.state = 11
     
   def initialiseRound(self):
@@ -97,6 +105,7 @@ class Game:
       else:
         print("Player "+player.name+" cannot afford buy in, kicked out")
         self.players.remove(player)
+    self.gui.update_pot(self.pot)
     self.state = 1
     self.playGame()
   
@@ -118,44 +127,55 @@ class Game:
       self.betIndex = 0
       self._process_next_bet(done_callback)
 
-  def _process_next_bet(self,done_callback):
+  def _process_next_bet(self, done_callback):
+    
+      if self.callBackId:  # Cancel any pending after()
+          self.gui.master.after_cancel(self.callBackId)
+          self.callBackId = None
+
       if self.betIndex >= len(self.activePlayers):
-        if done_callback:
-          done_callback()
+          if done_callback:
+              self.gui.master.after(3000,lambda: done_callback())
           return
+
       player = self.activePlayers[self.betIndex]
+      
       if player.type == "human":
-        print("Waiting for player: ",player.name)
-        # Check the queue for an action
-        if not self.action_queue.empty():
-          print("not empty")
-          action = self.action_queue.get()
-          if(action["action"] == "fold"):
-            player.fold = True
-          if(action["action"] == "call"):
-            player.bet(self.previousBet)
-            self.pot += self.previousBet
-            self.gui.update_pot(self.pot)
-          
-          self.betIndex += 1
-          print("current bet index: ",self.betIndex)
-          self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
-        else:
-          print("emptier than your brain")
-          self.gui.update_move("Waiting for your move...")
-          self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+          self.gui.update_playerTurn(True)
+          if not self.action_queue.empty():
+              action = self.action_queue.get()
+              if action["action"] == "fold":
+                  player.fold = True
+              elif action["action"] == "call":
+                  player.bet(self.previousBet)
+                  self.pot += self.previousBet
+                  self.gui.update_pot(self.pot)
+                  self.gui.update_move("you called")
+              self.gui.update_playerTurn(False)
+              self.betIndex += 1
+              self.callBackId = self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+          else:
+              self.gui.update_move("Waiting for your move...")
+              self.callBackId = self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
       else:
-        player.bet(self.previousBet)
-        self.pot +=  self.previousBet
-        # Process bot action here if needed
-        self.betIndex += 1
-        print("current bet index: ",self.betIndex)
-        self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+          # Wait 3s before processing bot
+          self.callBackId = self.gui.master.after(3000, lambda: self.processBotAction(player, done_callback))
+
+  def processBotAction(self, player, done_callback):
+      print(f"{player.name} acting at {datetime.datetime.now().strftime('%H:%M:%S')}")
+      self.gui.update_move(f"Bot: {player.name} called")
+      player.bet(self.previousBet)
+      self.pot += self.previousBet
+      self.gui.update_pot(self.pot)
+      self.betIndex += 1
+      self._process_next_bet(done_callback)
+  
   
   def afterBets(self):
     print("total pot: ",self.pot)
     if(not(self.checkGameOver())):
       self.state +=1
+      print("ok")
     else:
       self.state=10
     print("game state:", self.state)
