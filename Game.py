@@ -73,6 +73,7 @@ class Game:
       self.previousBet = 5
       self.dealFlop()
       print("flop: "+ ' '.join(str(card) for card in self.communityCards))
+      self.gui.update_community(self.communityCards)
       
     if (self.state==5 or self.state==7):
       self.previousBet = 5
@@ -122,6 +123,8 @@ class Game:
       player.setHand(card2)
       self.cards.remove(card1)
       self.cards.remove(card2)
+      if player.type == "human":
+        self.gui.update_hand(player.hand)
     
     self.state = 2
     self.playGame()
@@ -133,10 +136,10 @@ class Game:
 
   def _process_next_bet(self, done_callback):
     
-    print(f"function called at {datetime.datetime.now().strftime('%H:%M:%S')}")
+    #print(f"function called at {datetime.datetime.now().strftime('%H:%M:%S')}")
     
     if self.callBackId:  # Cancel any pending after()
-      print("cancelling callback")
+      #print("cancelling callback")
       self.gui.master.after_cancel(self.callBackId)
       self.callBackId = None
 
