@@ -79,6 +79,8 @@ class Game:
       self.previousBet = 5
       self.dealRandomCard()
       print('community cards: ', " ".join(str(card) for card in self.communityCards))
+      self.gui.update_community(self.communityCards)
+
       
     if (self.state == 9):
       for player in [p for p in self.players if not(p.fold)]:
@@ -125,7 +127,7 @@ class Game:
       self.cards.remove(card2)
       if player.type == "human":
         self.gui.update_hand(player.hand)
-    
+      self.gui.updateMoney(player)
     self.state = 2
     self.playGame()
   
@@ -162,7 +164,15 @@ class Game:
           self.pot += self.previousBet
           self.gui.update_pot(self.pot)
           self.gui.update_move("you called")
+        elif action["action"] == "raise":
+          bet = int(action["amount"])
+          player.bet(bet)
+          self.pot += bet
+          self.gui.update_pot(self.pot)
+          self.previousBet = bet
+          self.gui.update_move("You raised by "+ str(bet))
         
+        self.gui.updateMoney(player)
         self.gui.update_playerTurn(False)
         self.betIndex += 1
         self.callBackId = self.gui.master.after(500, lambda: self._process_next_bet(done_callback))
@@ -172,6 +182,7 @@ class Game:
     else:
       #self.callBackId = self.gui.master.after(3000, lambda: self.processBotAction(player, done_callback))
       self.processBotAction(player, done_callback)
+      self.gui.updateMoney(player)
 
   def processBotAction(self, player, done_callback):
       print(f"{player.name} acting at {datetime.datetime.now().strftime('%H:%M:%S')}")
