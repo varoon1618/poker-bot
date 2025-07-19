@@ -149,10 +149,12 @@ class PokerGUI:
   
   def prettyPrint(self,cards):
     text = ""
+    face_map = {"1": "A", "11": "J", "12": "Q", "13": "K"}
     for card in cards:
       suit = card[0]
       unicode = self.suitUniCodes[suit]
-      number = str(card[1:]) if str(card[1:]) != "1" else "A"
+      value = str(card[1:])
+      number = face_map.get(value, value)
       pretty = number + unicode + " "
       text += pretty
     
