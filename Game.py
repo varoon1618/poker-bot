@@ -285,27 +285,48 @@ class Game:
   
   
   def isSameSuit(self, player):
+    sameSuitCounts = []
+    playerSuits = [c[0] for c in player.hand]
+    for suit in playerSuits:
+      playerSameSuits = [c for c in player.hand if c[0]==suit]
+      communitySameSuits = [c for c in self.communityCards if c[0]==suit]
+      sameSuitCounts.append(len(playerSameSuits + communitySameSuits))
+    return max(sameSuitCounts) >= 5
+
+
+  def isConsecutive(self, player):
     cards = player.hand + self.communityCards
-    suits = [card[0] for card in cards]
-    first_suit = suits[0]
-    return all(suit == first_suit for suit in suits)
-  
-  def isConsecutive(self,player):
-    cards =  player.hand + self.communityCards
-    values = [int(c[1:]) for c in cards]
-    values.sort()
-    for i in range(len(values) - 1):
-      if values[i + 1] != values[i] + 1:
-        return False
-    return True
+    vals = [int(c[1:]) for c in cards]
+    uniq = sorted(set(vals))
+    if 1 in uniq:
+      uniq.append(14)
+    
+    count = max_count = 1
+    for i in range(1, len(uniq)):
+      if uniq[i] == uniq[i-1] + 1:
+          count += 1
+          max_count = max(max_count, count)
+      else:
+          count = 1
+
+    return max_count >= 5
+
   
   def isSameValue(self,player):
     cards = player.hand+ self.communityCards
     values = [int(c[1:]) for c in cards]
-    for i in range(len(values)-1):
-      if values[i+1] != values[i]:
-        return False
-      return True
+    uniq = sorted(set(values))
+    if 1 in uniq:
+      uniq.append(14)
+    
+    for i in range(1,len(uniq)):
+      if uniq[i] == uniq[i-1]:
+        count += 1
+        max_count = max(max_count,count)
+      else:
+        count = 1
+    
+    return max_count >= 4
   
   def returnPairs(self,player):
     cards = player.hand+self.communityCards
@@ -320,9 +341,16 @@ class Game:
     return int(counts.count(3)/3)
   
   def isRoyalFlush(self,player):
-    cards = player.hand+ self.communityCards
-    values = [int(c[1:]) for c in cards]
-    return set(values) == {1,10,11,12,13} and self.isSameSuit(cards)
+    flushValues ={1,10,11,12,13}
+    cards = player.hand + self.communityCards
+    playerSuits = [c[0] for c in player.hand]
+    flushCount = maxCount = 0
+    for suit in set(playerSuits):
+      flushCards = [c for c in cards if c[0] ==suit and int(c[1:]) in flushValues]
+      flushCount = len(flushCards)
+      maxCount = max(flushCount,maxCount)
+    
+    return maxCount >=5
 
   '''
   Royal FLush - A,K,Q,J,10 - all same suite

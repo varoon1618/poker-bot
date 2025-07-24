@@ -8,77 +8,96 @@ class Estimator:
     self.hand = player.hand
     self.community = player.communityCards
   
-  def royalFlushProbability(self,player):
+  def royalFlushProbability(self):
     
-    if not self.isPossibleRoyalFlush():
+    #to do - account for probability of royal flush cards not in opponents hand
+    
+    flushValues ={1,10,11,12,13}
+    remainingDraws = 5 - len(self.community)
+    playerValues = [int(c[1:]) for c in self.hand]
+    playerSuits = [c[0] for c in self.hand]
+    probability = 0
+    remainingCards = 52 -(2*5 + len(self.community))
+    
+    if not set(playerValues) & flushValues:
       return 0
     
-    cards = self.hand + self.community
-    royalFlushValues = {1,10,11,12,13}
-    cardValues = self.returnValues(cards)
-    common = set(cardValues) & royalFlushValues
-    requiredCards = 5 - len(common) #cards required to complete royal flush
-    remainingCards = 52 - (len(self.community) + 2*5) # cards that have not been dealt
-    drawsLeft = 5 - len(self.community)
-    playerSuits = self.returnSuits(self.hand)
     
-    if len(set(playerSuits)) == 1:
-      totalCombinations = math.comb(remainingCards,drawsLeft)
-      optimalCombinations = math.comb(remainingCards - requiredCards, drawsLeft - requiredCards)
-      return optimalCombinations/totalCombinations
-    
-    if len(set(playerSuits)) == 2:
-      print("TO DO")
+    for suit in set(playerSuits):
+      playerRoyal = [int(c[1:]) for c in self.hand if 
+                     c[0] == suit and int(c[1:]) in flushValues]
       
-    cards = self.hand + self.community
-    
-    remainingCards = 52 - (len(self.community) + 2*5)
-    drawsLeft = 5- len(self.community) #no of community cards left to draw
-    totalCombinations = math.comb(remainingCards,drawsLeft)
-    return (1/totalCombinations) # only one way to get royal flush of a given suit
-  
-  
-  def isPossibleRoyalFlush(self):
-    cards = self.hand + self.community
-    flushValues = {1,10,11,12,13}
-    remainingDraws = 5-len(self.community)
-    suitCounts = {}
-    
-    for card in cards:
-      suit = card[0]
-      value = int(card[1:])
-      if value in flushValues:
-        suitCounts[suit] = suitCounts.get(suit,0)+1
-    
-    requiredCards = 5 - max(suitCounts.values())
-
-    if not suitCounts:
-      return False
+      communityRoyal = [int(c[1:]) for c in self.community if 
+                        c[0] == suit and int(c[1:]) in flushValues]
+      
+      requiredRoyal = 5 - (len(playerRoyal) + len(communityRoyal))
+      
+      if requiredRoyal == 0:
+        probaility +=  1
+      
+      if requiredRoyal <= remainingDraws:
+        totalCombinations = math.comb(remainingCards,remainingDraws)
+        optimalCombinations = math.comb(remainingCards-requiredRoyal, remainingDraws - requiredRoyal)
+        probability += optimalCombinations/totalCombinations
         
-    if requiredCards > remainingDraws:
-      return False
-    
-    return True
-    
-    
-    
-    
-    
-    
-  def isSameSuit(self, player):
+    return probability
+  
+  def straightFlushProbability(self):
+    probability = 0
+    remainingDraws = 5 - len(self.community)
+    remainingCards = 52 - (2*5 + len(self.community))  # 2*5: 5 players, 2 cards each
+
+    suits_in_hand = set([c[0] for c in self.hand])
+    for suit in suits_in_hand:
+        # Get all cards of this suit in hand and community
+        suited_cards = [int(c[1:]) for c in self.hand + self.community if c[0] == suit]
+        suited_cards = sorted(set(suited_cards))
+
+        # Check for possible straight flushes (A can be high or low)
+        possible_straights = []
+        for start in range(1, 11):  # 1 to 10 (A-5 to 10-K)
+            straight = set(range(start, start+5))
+            # Special case for A-5 straight
+            if start == 1 and 14 not in suited_cards and 1 in suited_cards:
+                straight = {1, 2, 3, 4, 5}
+            missing = straight - set(suited_cards)
+            if len(missing) <= remainingDraws:
+                possible_straights.append(missing)
+
+        # For each possible straight flush, calculate probability
+        for missing in possible_straights:
+            required = len(missing)
+            if required == 0:
+                # Already have straight flush
+                probability += 1
+            elif required <= remainingDraws:
+                totalCombinations = math.comb(remainingCards, remainingDraws)
+                optimalCombinations = math.comb(remainingCards - required, remainingDraws - required)
+                probability += optimalCombinations / totalCombinations
+
+    return probability      
+  
+  def returnConsecutive(self, player):
     cards = player.hand + self.communityCards
+    vals = [int(c[1:]) for c in cards]
+    uniq = sorted(set(vals))
+    if 1 in uniq:
+      uniq.append(14)
+    
+    count = max_count = 1
+    for i in range(1, len(uniq)):
+      if uniq[i] == uniq[i-1] + 1:
+          count += 1
+          max_count = max(max_count, count)
+      else:
+          count = 1
+
+    return max_count 
+  
+  def isSameSuit(cards):
     suits = [card[0] for card in cards]
     first_suit = suits[0]
     return all(suit == first_suit for suit in suits)
-  
-  def isConsecutive(self,player):
-    cards =  player.hand + self.communityCards
-    values = [int(c[1:]) for c in cards]
-    values.sort()
-    for i in range(len(values) - 1):
-      if values[i + 1] != values[i] + 1:
-        return False
-    return True
   
   def isSameValue(self,player):
     cards = player.hand+ self.communityCards
