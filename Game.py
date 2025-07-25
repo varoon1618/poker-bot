@@ -316,8 +316,7 @@ class Game:
     cards = player.hand+ self.communityCards
     values = [int(c[1:]) for c in cards]
     uniq = sorted(set(values))
-    if 1 in uniq:
-      uniq.append(14)
+    count=max_count=1
     
     for i in range(1,len(uniq)):
       if uniq[i] == uniq[i-1]:
