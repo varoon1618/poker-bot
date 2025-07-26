@@ -4,11 +4,29 @@ from collections import Counter
 class Estimator:
   hand = []
   community = []
-  
-  def returnBestMove(self,player):
+  pot = -1
+  def returnBestMove(self,player,pot):
     self.hand = player.hand
     self.community = player.communityCards
-  
+    self.pot = pot 
+    expectedValue = self.calculateFinalProbability()*pot
+    
+    
+    
+  def calculateFinalProbability(self):
+    royal = self.royalFlushProbability()
+    straightFlush = self.straightFlushProbability()
+    fourOfaKind = self.fourOfKindProbability()
+    fullHouse = self.fullHouseProbability()
+    flush = self.flushProbability()
+    straight = self.straightProbability()
+    triplets = self.threeOfKindProbability()
+    twoPair = self.twoOfKindProbability()
+    onePair = self.twoOfKindProbability()
+    
+    prob = (royal+8*straightFlush+7*fourOfaKind+6*fullHouse+5*flush+4*straight+3*triplets+2*twoPair+onePair)/9
+    return prob
+    
   def royalFlushProbability(self):
     
     #to do - account for probability of royal flush cards not in opponents hand
@@ -161,6 +179,8 @@ class Estimator:
         totalCombinations = math.comb(remainingCards,remainingDraws)
         optimalCombinations = math.comb(13-len(playerSameSuits+communitySameSuits),required) * math.comb(remainingCards-required,remainingDraws-required)
         probability +=  optimalCombinations/totalCombinations
+    
+    return probability
   
   
   def straightProbability(self):
@@ -214,6 +234,8 @@ class Estimator:
         totalCombinations = math.comb(remainingCards, remainingDraws)
         optimalCombinations = math.comb(4-c,required) * math.comb(remainingCards - required, remainingDraws - required)
         probability += optimalCombinations / totalCombinations
+    
+    return probability
       
   def twoOfKindProbability(self):
     probability = 0
@@ -233,65 +255,15 @@ class Estimator:
         optimalCombinations = math.comb(3-c,required) * math.comb(remainingCards - required, remainingDraws - required)
         probability += optimalCombinations / totalCombinations
     
-  def returnConsecutive(self, player):
-    cards = player.hand + self.communityCards
-    vals = [int(c[1:]) for c in cards]
-    uniq = sorted(set(vals))
-    if 1 in uniq:
-      uniq.append(14)
+    return probability
     
-    count = max_count = 1
-    for i in range(1, len(uniq)):
-      if uniq[i] == uniq[i-1] + 1:
-          count += 1
-          max_count = max(max_count, count)
-      else:
-          count = 1
 
-    return max_count 
   
-  def isSameSuit(cards):
-    suits = [card[0] for card in cards]
-    first_suit = suits[0]
-    return all(suit == first_suit for suit in suits)
+
+
   
-  # returns value of highest no. of 
-  def sameValues(self,player):
-    cards = player.hand+ self.communityCards
-    values = [int(c[1:]) for c in cards]
-    uniq = sorted(set(values))
-    count=max_count=1
-    
-    for i in range(1,len(uniq)):
-      if uniq[i] == uniq[i-1]:
-        count += 1
-        max_count = max(max_count,count)
-      else:
-        count = 1
-    
-    return max_count
-  
-  def returnPairs(self,player):
-    cards = player.hand+self.communityCards
-    values = [int(c[1:]) for c in cards]
-    counts = [values.count(v) for v in values]
-    return int(counts.count(2)/2)
-  
-  def returnTriplets(self,player):
-    cards = player.hand+self.communityCards
-    values = [int(c[1:]) for c in cards]
-    counts = [values.count(v) for v in values]
-    return int(counts.count(3)/3)
-  
-  def isRoyalFlush(self,player):
-    cards = player.hand+ self.communityCards
-    values = [int(c[1:]) for c in cards]
-    return set(values) == {1,10,11,12,13} and self.isSameSuit(cards)
-  
-  def returnValues(cards):
-    return [int(c[1:]) for c in cards]
-  
-  def returnSuits(cards):
-    return [c[0] for c in cards]
+
+
+
     
     
