@@ -1,7 +1,8 @@
 import Player
 import random
 import datetime
-
+import Estimator
+from collections import Counter
 '''
 TO DO:
 
@@ -11,6 +12,7 @@ Add frontend
 
 Any bugs ?
 
+Add split pot logic in case of ties even after tie breaker
 '''
 
 class Game:
@@ -26,7 +28,7 @@ class Game:
                5: 'turn', 6: 'bet', 7:'river',8:'bet',9:'showdown',10:'winner' }
   previousBet = 5
   pot = 0
-  
+  estimator  = None
   
   def __init__(self,gui,action_queue):
     self.callBackId = None
@@ -37,6 +39,8 @@ class Game:
     player3 = Player.Player()
     player4 = Player.Player()
     player5 = Player.Player()
+    
+    self.estimator = Estimator.Estimator()
     player1.init(1,"varun",500,"human")
     player2.init(2,"bot1",500,"bot")
     player3.init(3,"bot2",500,"bot")
@@ -186,12 +190,31 @@ class Game:
 
   def processBotAction(self, player, done_callback):
       print(f"{player.name} acting at {datetime.datetime.now().strftime('%H:%M:%S')}")
-      self.gui.update_move(f"Bot: {player.name} called")
-      player.bet(self.previousBet)
-      self.pot += self.previousBet
-      self.gui.update_pot(self.pot)
-      self.betIndex += 1
-      self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
+      bestMove = self.estimator.returnBestMove(player,self.pot,self.previousBet)
+      print(f'Bot: {player.name}, Best Move {bestMove}')
+      if(bestMove['action'] == "raise"):
+        bet = bestMove['bet']
+        self.gui.update_move(f'Bot: {player.name} raised {bet}')
+        player.bet(bet)
+        self.pot += bet
+        self.gui.update_pot(self.pot)
+        self.previousBet = bet
+        self.betIndex +=1
+        self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
+      
+      if(bestMove['action'] == 'call'):
+        self.gui.update_move(f"Bot: {player.name} called")
+        player.bet(self.previousBet)
+        self.pot += self.previousBet
+        self.gui.update_pot(self.pot)
+        self.betIndex += 1
+        self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
+      
+      if(bestMove['action'] == 'fold'):
+        player.fold = True
+        self.betIndex += 1
+        self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
+        
   
   
   def afterBets(self):
@@ -246,12 +269,38 @@ class Game:
         print("Tie Breaker")
         tiebreaker = [remainingPlayers[i] for i, score in enumerate(scores) if score == highest]
         # Find the player with the highest card value
-        def get_highest_card(player):
-            all_cards = player.hand + self.communityCards
-            values = [int(c[1:]) for c in all_cards]
-            return max(values)
-        winner = max(tiebreaker, key=get_highest_card)
-        return winner.name
+        winner = self.break_tie(tiebreaker)
+        if isinstance(winner,list):
+          print("Tie between: ", [p.name for p in winner])
+          return winner[0].name
+        else:
+          return winner.name
+  
+  def break_tie(self,players):
+
+    def get_sorted_hand(player):
+        # Combine hand and community, convert to int, sort descending
+        all_cards = player.hand
+        values = [int(c[1:]) for c in all_cards]
+        # Ace can be high (14) or low (1), but for high card, treat as 14
+        if 1 in values:
+            values.append(14)
+            values.remove(1)
+        return sorted(values, reverse=True)
+
+    tied_players = players
+    hand_lists = {p: get_sorted_hand(p) for p in tied_players}
+
+    for i in range(2):
+        # Find the highest value at this position among all tied players
+        current_max = max((hand[i] for hand in hand_lists.values() if len(hand) > i), default=None)
+        # Filter players who have this value at this position
+        tied_players = [p for p in tied_players if len(hand_lists[p]) > i and hand_lists[p][i] == current_max]
+        if len(tied_players) == 1:
+            return tied_players[0]  # Winner found
+
+    # If still tied after all cards, return all tied players (split pot)
+    return tied_players
   
   def scoreHand(self,player):
     if self.isSameSuit(player):
@@ -330,14 +379,24 @@ class Game:
   def returnPairs(self,player):
     cards = player.hand+self.communityCards
     values = [int(c[1:]) for c in cards]
-    counts = [values.count(v) for v in values]
-    return int(counts.count(2)/2)
+    print(values)
+    counts = Counter(values)
+    pairs = 0
+    for c in counts.values():
+      if c==2:
+        pairs +=1 
+    print(f"pairs {pairs}")
+    return pairs
   
   def returnTriplets(self,player):
     cards = player.hand+self.communityCards
     values = [int(c[1:]) for c in cards]
-    counts = [values.count(v) for v in values]
-    return int(counts.count(3)/3)
+    counts = Counter(values)
+    triplets = 0
+    for c in counts.values():
+      if c==3:
+        triplets +=1 
+    return triplets
   
   def isRoyalFlush(self,player):
     flushValues ={1,10,11,12,13}

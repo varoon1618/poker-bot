@@ -5,13 +5,27 @@ class Estimator:
   hand = []
   community = []
   pot = -1
-  def returnBestMove(self,player,pot):
+  
+  def returnBestMove(self,player,pot,previousBet):
     self.hand = player.hand
     self.community = player.communityCards
     self.pot = pot 
-    expectedValue = self.calculateFinalProbability()*pot
+    probability = self.calculateFinalProbability()
+    expectedValue = probability*pot
+    drawsLeft = 5-len(self.community)
+    if expectedValue > 2*previousBet:
+      bet = min(player.money/max(1,drawsLeft),2*previousBet)
+      action = "raise"
+    elif expectedValue > previousBet:
+      bet = previousBet
+      action = "call"
+    else:
+      bet = 0
+      action = "fold"
     
+    return {"action":action,"bet":bet,"expectedValue":expectedValue,"proability":probability}
     
+      
     
   def calculateFinalProbability(self):
     royal = self.royalFlushProbability()
