@@ -3,6 +3,7 @@ class Player:
   name = "default"
   money = -1
   fold = False
+  hasActed = False
   hand = []
   type = ""
   communityCards = []

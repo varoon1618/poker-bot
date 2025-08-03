@@ -29,6 +29,7 @@ class Game:
   previousBet = 5
   pot = 0
   estimator  = None
+  lastRaised = None
   
   def __init__(self,gui,action_queue):
     self.callBackId = None
@@ -41,9 +42,9 @@ class Game:
     player5 = Player.Player()
     
     self.estimator = Estimator.Estimator()
-    player1.init(1,"varun",500,"human")
-    player2.init(2,"bot1",500,"bot")
-    player3.init(3,"bot2",500,"bot")
+    player2.init(1,"bot1",500,"bot")
+    player3.init(2,"bot2",500,"bot")
+    player1.init(3,"varun",500,"human")
     player4.init(4,"bot3",500,"bot")
     player5.init(5,"bot4",500,"bot")
     
@@ -150,11 +151,23 @@ class Game:
       self.callBackId = None
 
     if self.betIndex >= len(self.activePlayers):
-      if done_callback:
-          self.gui.master.after(3000,lambda: done_callback())
-      return
-
+      if all([p.hasActed for p in self.activePlayers]):  
+        if done_callback:
+            self.gui.master.after(3000,lambda: done_callback())
+        return
+      else:
+        self.betIndex = 0
+        self.callBackId = self.gui.master.after(3000, lambda: self.collectBets(done_callback=self.afterBets))
+        print('bello')
+        print([p.hasActed for p in self.activePlayers])
+        
     player = self.activePlayers[self.betIndex]
+    
+    if player == self.lastRaised or player.hasActed == True:
+      print(f'Player {player.name} already raised this round')
+      self.betIndex += 1
+      self.callBackId = self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
+      return 
     
     if player.type == "human":
       #print("HUMAN ")
@@ -163,13 +176,20 @@ class Game:
         action = self.action_queue.get()
         if action["action"] == "fold":
           player.fold = True
+          player.hasActed = True
         elif action["action"] == "call":
+          player.hasActed = True
           player.bet(self.previousBet)
           self.pot += self.previousBet
           self.gui.update_pot(self.pot)
           self.gui.update_move("you called")
         elif action["action"] == "raise":
+          self.lastRaised = player
           bet = int(action["amount"])
+          player.hasActed = True
+          for p in self.activePlayers:
+            if p != player:
+              p.hasActed = False
           player.bet(bet)
           self.pot += bet
           self.gui.update_pot(self.pot)
@@ -193,7 +213,13 @@ class Game:
       bestMove = self.estimator.returnBestMove(player,self.pot,self.previousBet)
       print(f'Bot: {player.name}, Best Move {bestMove}')
       if(bestMove['action'] == "raise"):
+        self.lastRaised = player
         bet = bestMove['bet']
+        player.hasActed = True
+        for p in self.activePlayers:
+          if p != player and p.playerID < player.playerID and not(p.fold):
+            p.hasActed = False
+          
         self.gui.update_move(f'Bot: {player.name} raised {bet}')
         player.bet(bet)
         self.pot += bet
@@ -205,13 +231,16 @@ class Game:
       if(bestMove['action'] == 'call'):
         self.gui.update_move(f"Bot: {player.name} called")
         player.bet(self.previousBet)
+        player.hasActed = True
         self.pot += self.previousBet
         self.gui.update_pot(self.pot)
         self.betIndex += 1
         self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
       
       if(bestMove['action'] == 'fold'):
+        self.gui.update_move(f'Bot: {player.name} folded')
         player.fold = True
+        player.hasActed = True
         self.betIndex += 1
         self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
         
@@ -220,8 +249,10 @@ class Game:
   def afterBets(self):
     print("total pot: ",self.pot)
     if(not(self.checkGameOver())):
+      for player in self.activePlayers:
+        player.hasActed = False
+      print(f'resetting active players {[p.name for p in self.activePlayers]}')
       self.state +=1
-      print("ok")
     else:
       self.state=10
     print("game state:", self.state)
