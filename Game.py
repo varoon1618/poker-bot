@@ -175,8 +175,8 @@ class Game:
       return 
     
     if player.type == "human":
-      #print("HUMAN ")
       self.gui.update_playerTurn(True)
+      self.gui.update_current_player(player.playerID)
       if not self.action_queue.empty():
         action = self.action_queue.get()
         if action["action"] == "fold":
@@ -203,8 +203,6 @@ class Game:
           self.gui.update_move("You raised by "+ str(bet))
         
         self.gui.updateMoney(player)
-        print(f'HUMAN MONEY {player.money}')
-        self.gui.update_current_player(player.playerID)
         self.gui.update_playerTurn(False)
         self.betIndex += 1
         self.callBackId = self.gui.master.after(500, lambda: self._process_next_bet(done_callback))

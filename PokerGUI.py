@@ -104,8 +104,10 @@ class PokerGUI:
     self.submit_button = ctk.CTkButton(self.entry_frame,text="Submit Bet", command = self.raise_bet)
     self.submit_button.grid(row=1,column=0,padx=10)
     
-    self.playerMoneyLabels = {1: self.player_purse_label,2:self.bot1_money_label,
-                              3:self.bot2_money_label,4:self.bot3_money_label,
+    self.playerMoneyLabels = {1:self.bot1_money_label,
+                              2:self.bot2_money_label,
+                              3:self.player_purse_label,
+                              4:self.bot3_money_label,
                               5:self.bot4_money_label}
     
     self.botLabels = {1:self.bot1_frame,2:self.bot2_frame,4:self.bot3_frame,5:self.bot4_frame}
