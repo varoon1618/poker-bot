@@ -8,13 +8,14 @@ class PokerGUI:
   
   def __init__(self, master,action_queue):
     
+    self.currentPlayerID = None
     self.playerTurn = False 
     self.action_queue = action_queue
     self.master = master
     #master.title("Poker")
     master.state('zoomed')        
     
-    self.main_frame = ctk.CTkFrame(self.master)
+    self.main_frame = ctk.CTkFrame(self.master, fg_color="#ccffcc")
     self.main_frame.pack(fill="both", expand=True)
 
     self.title_label = ctk.CTkLabel(self.main_frame, text="Poker", font=("Arial", 24))
@@ -22,7 +23,7 @@ class PokerGUI:
 
     self.status_label = ctk.CTkLabel(self.main_frame, text="Welcome to Poker!", text_color="blue")
     self.status_label.pack(pady=10)
-    
+      
     self.move_label = ctk.CTkLabel(self.main_frame)#label to display player/bot moves
     self.move_label.pack(pady=10)
     
@@ -47,25 +48,34 @@ class PokerGUI:
     self.bot2_money_label.grid(row=1,column=0,padx=5)
 
     self.bot3_frame = ctk.CTkFrame(self.main_frame)
-    self.bot3_frame.place(relx=0.85, rely=0.25, anchor="w")
+    self.bot3_frame.place(relx=0.85, rely=0.60, anchor="w")
     self.bot3_label = ctk.CTkLabel(self.bot3_frame, text="Bot3")
     self.bot3_label.grid(row=0,column=0,padx=5)
     self.bot3_money_label = ctk.CTkLabel(self.bot3_frame)
     self.bot3_money_label.grid(row=1,column=0,padx=5)
 
     self.bot4_frame = ctk.CTkFrame(self.main_frame)
-    self.bot4_frame.place(relx=0.85, rely=0.60, anchor="w")
+    self.bot4_frame.place(relx=0.85, rely=0.25, anchor="w")
     self.bot4_label = ctk.CTkLabel(self.bot4_frame, text="Bot4")
     self.bot4_label.grid(row=0,column=0,padx=5)
     self.bot4_money_label = ctk.CTkLabel(self.bot4_frame)
     self.bot4_money_label.grid(row=1,column=0,padx=5)
     
-    self.pot_label = ctk.CTkLabel(self.community_frame, text="Pot: $0")
-    self.pot_label.grid(row=0,column=0,padx = 5)
+    self.pot_label = ctk.CTkLabel(self.community_frame, text="Pot: £0")
+    self.pot_label.grid(row=0, column=0, columnspan=2, padx=5, sticky="we")
+
     self.community_label = ctk.CTkLabel(self.community_frame, text="Community Cards:")
-    self.community_label.grid(row=1, column=0, padx=5)
+    self.community_label.grid(row=1, column=0, padx=5, sticky="e")
     self.community_cards = ctk.CTkLabel(self.community_frame, text="?")
-    self.community_cards.grid(row=1, column=1, padx=5)
+    self.community_cards.grid(row=1, column=1, padx=5, sticky="w")
+
+    self.previousBet_label = ctk.CTkLabel(self.community_frame, text="Previous Bet: ")
+    self.previousBet_label.grid(row=2, column=0, padx=5, sticky="e")
+    self.previousBet = ctk.CTkLabel(self.community_frame, text="5")  # <-- fixed parent
+    self.previousBet.grid(row=2, column=1, padx=5, sticky="w")
+
+    self.community_frame.grid_columnconfigure(0, weight=1)
+    self.community_frame.grid_columnconfigure(1, weight=1)
     
     
     self.player_frame = ctk.CTkFrame(self.main_frame)
@@ -97,7 +107,9 @@ class PokerGUI:
     self.playerMoneyLabels = {1: self.player_purse_label,2:self.bot1_money_label,
                               3:self.bot2_money_label,4:self.bot3_money_label,
                               5:self.bot4_money_label}
-
+    
+    self.botLabels = {1:self.bot1_frame,2:self.bot2_frame,4:self.bot3_frame,5:self.bot4_frame}
+    
   def minimize_window(self):
       self.master.iconify()
 
@@ -124,9 +136,12 @@ class PokerGUI:
   def update_community(self, cards):
     pretty = self.prettyPrint(cards)
     self.community_cards.configure(text = pretty)
-
+  
+  def update_previousBet(self,previousBet):
+    self.previousBet.configure(text=previousBet)
+    
   def update_pot(self, pot):
-    self.pot_label.configure(text=f"Pot: ${pot}")
+    self.pot_label.configure(text=f"Pot: £{pot}")
 
   def update_status(self, status):
     self.status_label.configure(text=status)
@@ -159,6 +174,20 @@ class PokerGUI:
       text += pretty
     
     return text
+  
+  def update_current_player(self, playerID):
+      # De-highlight previous player if not human
+      if self.currentPlayerID is not None and self.currentPlayerID != 3:
+          prev_frame = self.botLabels.get(self.currentPlayerID)
+          if prev_frame:
+              prev_frame.configure(border_color='#ccffcc', border_width=0)
+      # Highlight current player if not human
+      if playerID != 3:
+          playerFrame = self.botLabels.get(playerID)
+          if playerFrame:
+              playerFrame.configure(border_color="red", border_width=3)
+      self.currentPlayerID = playerID      
+      
   
   def updateMoney(self,player):
     label = self.playerMoneyLabels[player.playerID]

@@ -65,23 +65,27 @@ class Game:
       
     if(self.state == 1):
       self.previousBet = 5
+      self.gui.update_previousBet(self.previousBet)
       self.dealCards()
       for player in self.players:
         print("Player "+player.name+"'s hand is: "+ player.printHand())
     
     if(self.state in [2,4,6,8]):
       self.previousBet = 5
+      self.gui.update_previousBet(self.previousBet)
       self.gui.update_status("Place your bets")
       self.collectBets(done_callback=self.afterBets)
       
     if(self.state==3):
       self.previousBet = 5
+      self.gui.update_previousBet(self.previousBet)
       self.dealFlop()
       print("flop: "+ ' '.join(str(card) for card in self.communityCards))
       self.gui.update_community(self.communityCards)
       
     if (self.state==5 or self.state==7):
       self.previousBet = 5
+      self.gui.update_previousBet(self.previousBet)
       self.dealRandomCard()
       print('community cards: ', " ".join(str(card) for card in self.communityCards))
       self.gui.update_community(self.communityCards)
@@ -133,6 +137,7 @@ class Game:
       if player.type == "human":
         self.gui.update_hand(player.hand)
       self.gui.updateMoney(player)
+      self.gui.update_current_player(player.playerID)
     self.state = 2
     self.playGame()
   
@@ -194,9 +199,12 @@ class Game:
           self.pot += bet
           self.gui.update_pot(self.pot)
           self.previousBet = bet
+          self.gui.update_previousBet(self.previousBet)
           self.gui.update_move("You raised by "+ str(bet))
         
         self.gui.updateMoney(player)
+        print(f'HUMAN MONEY {player.money}')
+        self.gui.update_current_player(player.playerID)
         self.gui.update_playerTurn(False)
         self.betIndex += 1
         self.callBackId = self.gui.master.after(500, lambda: self._process_next_bet(done_callback))
@@ -207,6 +215,7 @@ class Game:
       #self.callBackId = self.gui.master.after(3000, lambda: self.processBotAction(player, done_callback))
       self.processBotAction(player, done_callback)
       self.gui.updateMoney(player)
+      self.gui.update_current_player(player.playerID)
 
   def processBotAction(self, player, done_callback):
       print(f"{player.name} acting at {datetime.datetime.now().strftime('%H:%M:%S')}")
@@ -225,6 +234,7 @@ class Game:
         self.pot += bet
         self.gui.update_pot(self.pot)
         self.previousBet = bet
+        self.gui.update_previousBet(self.previousBet)
         self.betIndex +=1
         self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
       
