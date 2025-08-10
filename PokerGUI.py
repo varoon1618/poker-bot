@@ -15,7 +15,7 @@ class PokerGUI:
     #master.title("Poker")
     master.state('zoomed')        
     
-    self.main_frame = ctk.CTkFrame(self.master, fg_color="#ccffcc")
+    self.main_frame = ctk.CTkFrame(self.master, fg_color="#2d9c2d")
     self.main_frame.pack(fill="both", expand=True)
 
     self.title_label = ctk.CTkLabel(self.main_frame, text="Poker", font=("Arial", 24))
@@ -30,36 +30,44 @@ class PokerGUI:
     self.previousBet_label = ctk.CTkLabel(self.main_frame)
     #self.previousBet_label.pack(pady=10)
     
-    self.community_frame = ctk.CTkFrame(self.main_frame)
+    self.community_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.community_frame.place(relx=0.5,rely=0.3,anchor="center")
     
-    self.bot1_frame = ctk.CTkFrame(self.main_frame)
+    self.bot1_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.bot1_frame.place(relx=0.15, rely=0.25, anchor="e")
     self.bot1_label = ctk.CTkLabel(self.bot1_frame, text="Bot1")
     self.bot1_label.grid(row=0,column=0,padx=5)
     self.bot1_money_label = ctk.CTkLabel(self.bot1_frame)
     self.bot1_money_label.grid(row=1,column=0,padx=5)
+    self.bot1_action_label = ctk.CTkLabel(self.bot1_frame,text="Action: ")
+    self.bot1_action_label.grid(row=2,column=0,padx=5)
     
-    self.bot2_frame = ctk.CTkFrame(self.main_frame)
+    self.bot2_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.bot2_frame.place(relx=0.15, rely=0.60, anchor="e")
     self.bot2_label = ctk.CTkLabel(self.bot2_frame, text="Bot2")
     self.bot2_label.grid(row=0,column=0,padx=5)
     self.bot2_money_label = ctk.CTkLabel(self.bot2_frame)
     self.bot2_money_label.grid(row=1,column=0,padx=5)
+    self.bot2_action_label = ctk.CTkLabel(self.bot2_frame,text="Action: ")
+    self.bot2_action_label.grid(row=2,column=0,padx=5)
 
-    self.bot3_frame = ctk.CTkFrame(self.main_frame)
+    self.bot3_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.bot3_frame.place(relx=0.85, rely=0.60, anchor="w")
     self.bot3_label = ctk.CTkLabel(self.bot3_frame, text="Bot3")
     self.bot3_label.grid(row=0,column=0,padx=5)
     self.bot3_money_label = ctk.CTkLabel(self.bot3_frame)
     self.bot3_money_label.grid(row=1,column=0,padx=5)
-
-    self.bot4_frame = ctk.CTkFrame(self.main_frame)
+    self.bot3_action_label = ctk.CTkLabel(self.bot3_frame,text="Action: ")
+    self.bot3_action_label.grid(row=2,column=0,padx=5)
+    
+    self.bot4_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.bot4_frame.place(relx=0.85, rely=0.25, anchor="w")
     self.bot4_label = ctk.CTkLabel(self.bot4_frame, text="Bot4")
     self.bot4_label.grid(row=0,column=0,padx=5)
     self.bot4_money_label = ctk.CTkLabel(self.bot4_frame)
     self.bot4_money_label.grid(row=1,column=0,padx=5)
+    self.bot4_action_label = ctk.CTkLabel(self.bot4_frame,text="Action: ")
+    self.bot4_action_label.grid(row=2,column=0,padx=5)
     
     self.pot_label = ctk.CTkLabel(self.community_frame, text="Pot: £0")
     self.pot_label.grid(row=0, column=0, columnspan=2, padx=5, sticky="we")
@@ -69,7 +77,7 @@ class PokerGUI:
     self.community_cards = ctk.CTkLabel(self.community_frame, text="?")
     self.community_cards.grid(row=1, column=1, padx=5, sticky="w")
 
-    self.previousBet_label = ctk.CTkLabel(self.community_frame, text="Previous Bet: ")
+    self.previousBet_label = ctk.CTkLabel(self.community_frame, text="Current Bet: ")
     self.previousBet_label.grid(row=2, column=0, padx=5, sticky="e")
     self.previousBet = ctk.CTkLabel(self.community_frame, text="5")  # <-- fixed parent
     self.previousBet.grid(row=2, column=1, padx=5, sticky="w")
@@ -78,7 +86,7 @@ class PokerGUI:
     self.community_frame.grid_columnconfigure(1, weight=1)
     
     
-    self.player_frame = ctk.CTkFrame(self.main_frame)
+    self.player_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.player_frame.place(relx=0.5, rely=0.60,anchor="center")
     
     
@@ -90,7 +98,7 @@ class PokerGUI:
     self.player_purse_label.grid(row=1,column=1,padx=5)
 
     
-    self.action_frame = ctk.CTkFrame(self.main_frame)
+    self.action_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.fold_button = ctk.CTkButton(self.action_frame, text="Fold", command=self.fold)
     self.fold_button.grid(row=0, column=0, padx=10)
     self.call_button = ctk.CTkButton(self.action_frame, text="Call", command=self.call)
@@ -98,7 +106,7 @@ class PokerGUI:
     self.raise_button = ctk.CTkButton(self.action_frame, text="Raise", command=self.show_raise_entry)
     self.raise_button.grid(row=0, column=2, padx=10)
     
-    self.entry_frame = ctk.CTkFrame(self.main_frame)
+    self.entry_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.raise_entry = ctk.CTkEntry(self.entry_frame,placeholder_text="Enter Bet Amount", width=150)
     self.raise_entry.grid(row=0, column=0, padx=10)
     self.submit_button = ctk.CTkButton(self.entry_frame,text="Submit Bet", command = self.raise_bet)
@@ -110,7 +118,8 @@ class PokerGUI:
                               4:self.bot3_money_label,
                               5:self.bot4_money_label}
     
-    self.botLabels = {1:self.bot1_frame,2:self.bot2_frame,4:self.bot3_frame,5:self.bot4_frame}
+    self.botActionLabels = {1:self.bot1_action_label,2:self.bot2_action_label,4:self.bot3_action_label,5:self.bot4_action_label}
+    self.botFrames = {1:self.bot1_frame,2:self.bot2_frame,4:self.bot3_frame,5:self.bot4_frame}
     
   def minimize_window(self):
       self.master.iconify()
@@ -147,7 +156,23 @@ class PokerGUI:
 
   def update_status(self, status):
     self.status_label.configure(text=status)
-
+    
+  def update_bot_action(self,bot,move):
+    id = bot.playerID
+    actionLabel = self.botActionLabels.get(id)
+    if move['action'] == 'fold':
+      actionLabel.configure(text='Action: Folded')
+    if move['action'] == 'call':
+      actionLabel.configure(text='Action: Called')
+    if move['action'] == 'raise':
+      actionLabel.configure(text=f'Action: Raised {move['amount']}')
+  
+  def reset_bot_action_labels(self,bots):
+    for bot in bots:
+      id = bot.playerID
+      actionLabel = self.botActionLabels.get(id)
+      actionLabel.configure(text='Action: ')
+  
   def fold(self):
     self.action_queue.put({"action":"fold","playerName":"human","amount":0})
     #self.update_status("You folded")
@@ -180,12 +205,12 @@ class PokerGUI:
   def update_current_player(self, playerID):
       # De-highlight previous player if not human
       if self.currentPlayerID is not None and self.currentPlayerID != 3:
-          prev_frame = self.botLabels.get(self.currentPlayerID)
+          prev_frame = self.botFrames.get(self.currentPlayerID)
           if prev_frame:
-              prev_frame.configure(border_color='#ccffcc', border_width=0)
+              prev_frame.configure(border_color='#2d9c2d', border_width=0)
       # Highlight current player if not human
       if playerID != 3:
-          playerFrame = self.botLabels.get(playerID)
+          playerFrame = self.botFrames.get(playerID)
           if playerFrame:
               playerFrame.configure(border_color="red", border_width=3)
       self.currentPlayerID = playerID      

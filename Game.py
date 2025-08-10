@@ -57,6 +57,11 @@ class Game:
   
   
   def playGame(self):
+    
+    activeBots = [p for p in self.players if p.type=="bot" and not(p.fold)]
+    self.gui.reset_bot_action_labels(activeBots)
+    
+    
     if(self.state == 0):
       self.initialiseRound()
       self.gui.update_status("Collecting Buy Ins")
@@ -200,7 +205,7 @@ class Game:
           self.gui.update_pot(self.pot)
           self.previousBet = bet
           self.gui.update_previousBet(self.previousBet)
-          self.gui.update_move("You raised by "+ str(bet))
+          self.gui.update_move("You raised to "+ str(bet))
         
         self.gui.updateMoney(player)
         self.gui.update_playerTurn(False)
@@ -227,12 +232,13 @@ class Game:
           if p != player and p.playerID < player.playerID and not(p.fold):
             p.hasActed = False
           
-        self.gui.update_move(f'Bot: {player.name} raised {bet}')
+        self.gui.update_move(f'Bot: {player.name} raised to {bet}')
         player.bet(bet)
         self.pot += bet
         self.gui.update_pot(self.pot)
         self.previousBet = bet
         self.gui.update_previousBet(self.previousBet)
+        self.gui.update_bot_action(player,{'action':'raise','amount':bet})
         self.betIndex +=1
         self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
       
@@ -242,6 +248,7 @@ class Game:
         player.hasActed = True
         self.pot += self.previousBet
         self.gui.update_pot(self.pot)
+        self.gui.update_bot_action(player,{'action':'call','amount':self.previousBet})
         self.betIndex += 1
         self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
       
@@ -249,6 +256,7 @@ class Game:
         self.gui.update_move(f'Bot: {player.name} folded')
         player.fold = True
         player.hasActed = True
+        self.gui.update_bot_action(player,{'action':'fold','amount':0})
         self.betIndex += 1
         self.callBackId = self.gui.master.after(3000, lambda: self._process_next_bet(done_callback))
         
