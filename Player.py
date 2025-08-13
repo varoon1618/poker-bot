@@ -56,6 +56,7 @@ class Player:
   def resetPlayer(self):
     self.hand = []
     self.fold = False
+    self.hasActed = False
     self.communityCards = []
     
   def printHand(self):

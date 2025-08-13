@@ -107,14 +107,18 @@ class Game:
       winner  = self.calculateWinner()
       print("The winner is: ", winner)
       self.gui.update_status("The winner is: " +str(winner) )
+      self.revealCards()
       self.state = 11
-    
+  
   def initialiseRound(self):
     self.cards = self.spades + self.hearts + self.clubs + self.diamonds
     self.pot = 0
     for player in self.players:
       player.resetPlayer()
-    
+  
+  def revealCards(self):
+    for p in self.activePlayers:
+      self.gui.show_cards(p.playerID,p.hand)
   
   def addPlayer(self,player):
     self.players.append(player)
@@ -173,7 +177,7 @@ class Game:
         
     player = self.activePlayers[self.betIndex]
     
-    if player == self.lastRaised or player.hasActed == True:
+    if player.hasActed == True:
       print(f'Player {player.name} already raised this round')
       self.betIndex += 1
       self.callBackId = self.gui.master.after(100, lambda: self._process_next_bet(done_callback))
@@ -366,15 +370,15 @@ class Game:
       return 5 #straight
     
     if (self.returnTriplets(player)>0):
-      if(self.returnPairs(player)==1):
+      if(self.returnPairs(player)-1==1):
         return 7 #full house
       else:
         return 4 #three of a kind
     
-    if(self.returnPairs(player)==2):
+    if(self.returnPairs(player)-1==2):
       return 3 # 2 pairs
     
-    if(self.returnPairs(player)==1):
+    if(self.returnPairs(player)-1==1):
       return 2 # 1 pair
     
     return 1 #nothing 
