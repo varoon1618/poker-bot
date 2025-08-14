@@ -105,11 +105,34 @@ class Game:
     
     if (self.state==10):
       winner  = self.calculateWinner()
-      print("The winner is: ", winner)
-      self.gui.update_status("The winner is: " +str(winner) )
+      print("The winner is: ", winner.name)
+      self.gui.update_status("The winner is: " +str(winner.name) )
       self.revealCards()
+      winner.money += self.pot
+      self.gui.show_continue_entry()
+      
+      self.check_continue_game()
       self.state = 11
   
+  def check_continue_game(self):
+    if self.gui.continue_game:
+      self.next_round()
+    
+    if self.gui.continue_game == False:
+      self.gui.master.destroy()
+    
+    else:
+      self.master.after(100, self.check_continue_game)
+      
+  def next_round(self):
+    self.initialiseRound()
+    self.gui.conitue_game = None
+    self.gui.currentPlayerID = None
+    self.gui.playerTurn = False 
+  
+  def winner_takes_it_all(self,winner):
+    winner.money += self.pot
+    
   def initialiseRound(self):
     self.cards = self.spades + self.hearts + self.clubs + self.diamonds
     self.pot = 0
@@ -310,12 +333,12 @@ class Game:
   def calculateWinner(self):
     remainingPlayers = [p for p in self.players if not(p.fold)]
     if(len(remainingPlayers) ==1):
-      return remainingPlayers[0].name
+      return remainingPlayers[0]
     else:
       scores = [self.scoreHand(p) for p in remainingPlayers]
       highest = max(scores)
       if(scores.count(highest) ==1):
-        return remainingPlayers[scores.index(highest)].name
+        return remainingPlayers[scores.index(highest)]
       else:
         print("Tie Breaker")
         tiebreaker = [remainingPlayers[i] for i, score in enumerate(scores) if score == highest]
@@ -323,9 +346,9 @@ class Game:
         winner = self.break_tie(tiebreaker)
         if isinstance(winner,list):
           print("Tie between: ", [p.name for p in winner])
-          return winner[0].name
+          return winner[0]
         else:
-          return winner.name
+          return winner
   
   def break_tie(self,players):
 

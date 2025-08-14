@@ -7,7 +7,7 @@ class PokerGUI:
   suitUniCodes = {"s":"\u2660","h":'\u2665',"c":'\u2663',"d":'\u2666'}
   
   def __init__(self, master,action_queue):
-    
+    self.continue_game = None
     self.currentPlayerID = None
     self.playerTurn = False 
     self.action_queue = action_queue
@@ -122,6 +122,12 @@ class PokerGUI:
     self.submit_button = ctk.CTkButton(self.entry_frame,text="Submit Bet", command = self.raise_bet)
     self.submit_button.grid(row=1,column=0,padx=10)
     
+    self.continue_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
+    self.continue_button = ctk.CTkButton(self.continue_frame,text ="Continue Playing", command = self.continue_playing)
+    self.raise_entry.grid(row=0, column=0, padx=10)
+    self.submit_button = ctk.CTkButton(self.continue_frame,text="End Game", command = self.end_game)
+    self.submit_button.grid(row=1,column=0,padx=10)
+    
     self.playerMoneyLabels = {1:self.bot1_money_label,
                               2:self.bot2_money_label,
                               3:self.player_purse_label,
@@ -195,7 +201,15 @@ class PokerGUI:
   
   def show_raise_entry(self):
     self.entry_frame.place(relx=0.5,rely=0.8,anchor="center")
-    
+  
+  def show_continue_entry(self):
+    self.continue_frame.place(relx=0.5,rely=0.8,anchor='center')
+  
+  def continue_playing(self):
+    self.continue_game = True
+  
+  def end_game(self):
+    self.conitue_game = False
   def raise_bet(self):
     amount = self.raise_entry.get()
     self.action_queue.put({"action":"raise","playerName":"human","amount":amount})
@@ -236,7 +250,5 @@ class PokerGUI:
     label = self.botHandLabels.get(playerID,0)
     if not isinstance(label,int):
       label.configure(text='Hand: '+pretty)
-    
-    
-    
+      
       
