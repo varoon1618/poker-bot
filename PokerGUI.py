@@ -124,7 +124,7 @@ class PokerGUI:
     
     self.continue_frame = ctk.CTkFrame(self.main_frame,fg_color="#ccffcc")
     self.continue_button = ctk.CTkButton(self.continue_frame,text ="Continue Playing", command = self.continue_playing)
-    self.raise_entry.grid(row=0, column=0, padx=10)
+    self.continue_button.grid(row=0, column=0, padx=10)
     self.submit_button = ctk.CTkButton(self.continue_frame,text="End Game", command = self.end_game)
     self.submit_button.grid(row=1,column=0,padx=10)
     
@@ -210,6 +210,7 @@ class PokerGUI:
   
   def end_game(self):
     self.conitue_game = False
+  
   def raise_bet(self):
     amount = self.raise_entry.get()
     self.action_queue.put({"action":"raise","playerName":"human","amount":amount})

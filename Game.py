@@ -122,7 +122,7 @@ class Game:
       self.gui.master.destroy()
     
     else:
-      self.master.after(100, self.check_continue_game)
+      self.gui.master.after(100, self.check_continue_game)
       
   def next_round(self):
     self.initialiseRound()

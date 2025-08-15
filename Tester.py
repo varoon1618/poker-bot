@@ -9,13 +9,15 @@ if __name__ == "__main__":
     action_queue = queue.Queue()
     gui = PokerGUI(root,action_queue)
     game = Game.Game(gui,action_queue)
-    #bot1 has hand:  d10 h7
-    #varun has hand:  c2 h4
-    #community cards:  s10 s13 h3 d13 s7
-    game.communityCards = ['s10','s13', 'h3', 'd13', 's7']
+    '''
+    bot1 has hand:  d11 h2
+varun has hand:  h10 s5
+community cards:  h11 d8 s12 d9 h4
+    '''
+    game.communityCards = ['h11','d8', 's12', 'd9', 'h4']
     player = Player.Player()
     player.init(1,"varun",500,"human")
-    player.hand = ['d10','h7']
+    player.hand = ['h10','s5']
     s1 = game.scoreHand(player)
     print(s1)
   
