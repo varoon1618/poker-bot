@@ -110,10 +110,8 @@ class Game:
       self.revealCards()
       winner.money += self.pot
       self.gui.show_continue_entry()
-      
       self.check_continue_game()
-      self.state = 11
-  
+    
   def check_continue_game(self):
     if self.gui.continue_game:
       self.next_round()
@@ -125,10 +123,13 @@ class Game:
       self.gui.master.after(100, self.check_continue_game)
       
   def next_round(self):
+    
     self.initialiseRound()
     self.gui.conitue_game = None
     self.gui.currentPlayerID = None
     self.gui.playerTurn = False 
+    self.state = 0
+    self.playGame()
   
   def winner_takes_it_all(self,winner):
     winner.money += self.pot
