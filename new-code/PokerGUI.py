@@ -7,7 +7,7 @@ class PokerGUI:
   def __init__(self, master, engine):
     self.master = master
     self.engine = engine
-    self.human_id = 1 #player id of the human player
+    self.human_id = 0 #player id of the human player
     
     master.state('zoomed')
     self.main_frame = ctk.CTkFrame(master, fg_color="#2d9c2d")
@@ -64,7 +64,7 @@ class PokerGUI:
     self.fold_button = ctk.CTkButton(
         self.action_frame, 
         text="Fold", 
-        command=self.fold,
+        command=self._trigger_fold,
         width=80
     )
     self.fold_button.grid(row=0, column=0, padx=10, pady=5)
@@ -72,7 +72,7 @@ class PokerGUI:
     self.call_button = ctk.CTkButton(
         self.action_frame, 
         text="Call", 
-        command=self.call,
+        command=self._trigger_call,
         width=80
     )
     self.call_button.grid(row=0, column=1, padx=10, pady=5)
@@ -100,7 +100,7 @@ class PokerGUI:
     self.submit_bet_button = ctk.CTkButton(
         self.entry_frame, 
         text="Submit Bet", 
-        command=self.raise_bet,
+        command=self._trigger_raise,
         width=80
     )
     self.submit_bet_button.grid(row=1, column=0, padx=10, pady=5)
@@ -144,10 +144,10 @@ class PokerGUI:
   
   def _build_bots(self):
     bot_positions = [
-        {"id": 2, "name": "Bot 1", "relx": 0.15, "rely": 0.25, "anchor": "e"},
-        {"id": 3, "name": "Bot 2", "relx": 0.15, "rely": 0.60, "anchor": "e"},
-        {"id": 4, "name": "Bot 3", "relx": 0.85, "rely": 0.60, "anchor": "w"},
-        {"id": 5, "name": "Bot 4", "relx": 0.85, "rely": 0.25, "anchor": "w"},
+        {"id": 1, "name": "Bot 1", "relx": 0.15, "rely": 0.25, "anchor": "e"},
+        {"id": 2, "name": "Bot 2", "relx": 0.15, "rely": 0.60, "anchor": "e"},
+        {"id": 3, "name": "Bot 3", "relx": 0.85, "rely": 0.60, "anchor": "w"},
+        {"id": 4, "name": "Bot 4", "relx": 0.85, "rely": 0.25, "anchor": "w"},
     ]
     
     self.bot_widgets = {} 
@@ -203,7 +203,35 @@ class PokerGUI:
     self.call_button.configure(state="normal")
     self.raise_button.configure(state="normal")
   
-
+  def update_display(self, state):
+    self.pot_label.config(text=f"Pot: £{state.pot}")    
+    self.current_bet_label.config(text=str(state.current_bet))
+    
+    human_player = state.players[0] 
+    self.player_purse_label.config(text=f"Your Purse: £{human_player.chips}")  # "£80"
+    self.player_hand_cards.config(text=self._format_cards(human_player.hand))
+    
+    # --- Update Bots (Loop through them) ---
+    for bot_id in range(1,5):
+        bot = state.players[bot_id]
+        self.bot_widgets[bot_id]["money_label"].config(text=f"£{bot.chips}")
+    
+    # --- Enable/Disable Action Buttons ---
+    # It is now Bot 1's turn, so disable human buttons
+    if state.current_player_idx == self.human_id:
+        self._enable_action_buttons()
+    else:
+        self._disable_action_buttons()  # <-- This runs (buttons are disabled)
+    
+    # --- Status Labels ---
+    self.status_label.config(text=f"State: {state.state}")  # "PREFLOP"
+    self.move_label.config(text="You raised to £20")
+    
+    # --- Check if Active Player is an AI (Bot 1) ---
+    if state.current_player_idx != self.human_id:
+        # It's Bot 1's turn. Schedule its move in 500ms.
+        self.master.after(500, self._trigger_ai_move)        
+    
 if __name__ == "__main__":
   root = tk.Tk()
   gui = PokerGUI(root,engine=None)

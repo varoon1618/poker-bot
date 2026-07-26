@@ -50,7 +50,30 @@ class Player:
   @property
   def is_active(self):
     return not(self.has_folded) and not(self.is_all_in)
-      
+
+class GameState:
+  def __init__(self):
+    self.pot = 0
+    self.current_player = None
+    self.round = None
+    self.community_cards = []
+    self.prev_bet = 0
+    self.current_player_action = None
+    self.players = []
+  
+  @classmethod
+  def from_game_engine(cls,engine):
+    current_player = engine.players[engine.current_player_idx]
+    pot = engine.pot
+    community_cards = engine.community_cards
+    round = engine.round
+    prev_bet = engine.prev_bet
+    current_player_action = engine.current_player_action
+    return cls(current_player=current_player,pot=pot,community_cards=community_cards,
+               round = round, prev_bet=prev_bet,current_player_action=current_player_action,
+               players = engine.players)
+    
+  
 class PokerEngine:
   def __init__(self):
     self.listeners = []
@@ -60,10 +83,11 @@ class PokerEngine:
     self.deck = Deck()
     self.current_player_idx = None
     self.round = None
-    self.has_acted = {} #set of players that have already acted this round
+    self.has_acted = set() #set of players that have already acted this round
     self.num_raises = 0
-    self.MAX_RAISES = 2
+    self.MAX_RAISES_ROUND = 2 #max raises PER ROUND
     self.prev_bet = 0
+    self.current_player_action = None
   
   def register_listener(self,callback):
     self.listeners.append(callback)
@@ -72,16 +96,17 @@ class PokerEngine:
     for callback in self.listeners:
       callback(self.get_game_state())
   
-  def get_game_state():
-    '''TODO: Define Game state dict to be sent 
-             Identify different params'''    
-    pass
-  
+  def get_game_state(self):
+    '''TODO: ADD more attrs to game state'''
+    
+    current_state = GameState.from_game_engine(self)
+    return current_state
+    
   def add_players(self):
-    human = Player(id=1,is_human=True)
+    human = Player(id=0,is_human=True)
     self.players.append(human)
     
-    for i in range(2,6):
+    for i in range(1,5):
       bot = Player(id=i,is_human=False)
       self.players.append(bot)
   
@@ -169,23 +194,35 @@ class PokerEngine:
     self.current_player_idx = self._get_first_actor_idx()
     self._broadcast_state()
   
-  def handle_action(self,id,action,amount=None):
+  def handle_action(self,action,amount=0):
     '''
     TODO: Add additional check for is game over
           Validation of input action
           individual handle methods
     '''
+    curr_player = self.players[self.current_player_idx]
     
     if action == 'CALL':
-      self.handle_call(id)
-    
+      try:
+        self.handle_call(curr_player)
+      except ValueError as e:
+        #Add log statement
+        self._broadcast_state()
+        return
+          
     if action == 'RAISE':
-      self.handle_raise(id,amount)
+      try:
+        self.handle_raise(curr_player,amount)    
+      except ValueError as e:
+        self._broadcast_state()
+        return
     
     if action == 'FOLD':
-      self.handle_fold(id)
-    
-    curr_player = self.players[self.current_player_idx]
+      try:
+        self.handle_fold(curr_player)
+      except ValueError as e:
+        self._broadcast_state()
+        return
     
     self.has_acted.add(curr_player)
     
@@ -196,14 +233,36 @@ class PokerEngine:
     else:
       self._broadcast_state()
   
-  def handle_call(id):
-    pass
+  def handle_call(self,player):
+      if player.chips < self.prev_bet:
+        raise ValueError("Too few chips")
+      
+      player.chips -= self.prev_bet
+      self.pot += self.prev_bet
+      return
+      
   
-  def handle_raise(id,amount):
-    pass
+  def handle_raise(self,player,amount):
+    if player.chips < amount:
+      raise ValueError("Too few chips")
+    
+    player.chips -= amount
+    self.prev_bet = amount
+    self.pot += amount
+    
+    if self.num_raises < self.MAX_RAISES_ROUND:
+      self.num_raises +=1
+      self.has_acted = set()
+    
+    return
   
-  def handle_fold(id,amount):
-    pass
+  def handle_fold(self,player):
+    
+    if not(player.has_folded):
+      raise ValueError("Player already folded")
+    
+    player.has_folded = True
+    return
   
       
     
