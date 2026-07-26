@@ -2,12 +2,17 @@ import customtkinter as ctk
 from tkinter import messagebox
 import tkinter as tk
 from PokerEngine import PokerEngine
+import logging
+from BotController import BotController
+
+logger = logging.getLogger(__name__)
 
 class PokerGUI:
   def __init__(self, master, engine):
     self.master = master
     self.engine = engine
     self.human_id = 0 #player id of the human player
+    self.bot_controller = BotController()
     
     master.state('zoomed')
     self.main_frame = ctk.CTkFrame(master, fg_color="#2d9c2d")
@@ -19,8 +24,6 @@ class PokerGUI:
     self._build_player_area()
     self._build_action_controls()
     self._build_game_controls()
-    
-    #self._set_action_buttons_state("disabled")
   
   def _build_header(self):
     # Title
@@ -28,11 +31,11 @@ class PokerGUI:
     self.title_label.pack(pady=10)
     
     # Status label (displays game state messages like "Preflop", "Flop", etc.)
-    self.status_label = ctk.CTkLabel(self.main_frame, text="Welcome to Poker!", text_color="blue")
+    self.status_label = ctk.CTkLabel(self.main_frame, text="Welcome to Poker!")
     self.status_label.pack(pady=10)
     
     # Move label (displays what each player/bot did)
-    self.move_label = ctk.CTkLabel(self.main_frame, text="")
+    self.move_label = ctk.CTkLabel(self.main_frame, text="Latest Move: ",fg_color="#5bb5ec")
     self.move_label.pack(pady=10)  
   
   def _build_player_area(self):
@@ -127,12 +130,6 @@ class PokerGUI:
     )
     self.end_game_button.grid(row=1, column=0, padx=10, pady=5)
   
-  def _continue_playing(self):
-    pass
-  
-  def _end_game(self):
-    pass
-  
   def _build_table(self):
     self.community_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
     self.community_frame.place(relx=0.5, rely=0.3, anchor="center")
@@ -150,10 +147,10 @@ class PokerGUI:
   
   def _build_bots(self):
     bot_positions = [
-        {"id": 1, "name": "Bot 1", "relx": 0.15, "rely": 0.25, "anchor": "e"},
-        {"id": 2, "name": "Bot 2", "relx": 0.15, "rely": 0.60, "anchor": "e"},
-        {"id": 3, "name": "Bot 3", "relx": 0.85, "rely": 0.60, "anchor": "w"},
-        {"id": 4, "name": "Bot 4", "relx": 0.85, "rely": 0.25, "anchor": "w"},
+        {"id": 4, "name": "Bot 4", "relx": 0.15, "rely": 0.25, "anchor": "e"},
+        {"id": 3, "name": "Bot 3", "relx": 0.15, "rely": 0.60, "anchor": "e"},
+        {"id": 2, "name": "Bot 2", "relx": 0.85, "rely": 0.60, "anchor": "w"},
+        {"id": 1, "name": "Bot 1", "relx": 0.85, "rely": 0.25, "anchor": "w"},
     ]
     
     self.bot_widgets = {} 
@@ -189,7 +186,14 @@ class PokerGUI:
     amount = int(self.raise_entry.get())
     self._process_action("RAISE",amount=amount)
     self._disable_action_buttons()
-    
+  
+  def _format_cards(self,cards):
+    out = ""
+    for c in cards:
+      out += str(c)
+      out += " "
+    return out
+
   def _process_action(self,action,amount=0):
     self.engine.handle_action(action,amount)
   
@@ -206,7 +210,7 @@ class PokerGUI:
     self.raise_entry.delete(0, "end")
     self.entry_frame.place(relx=0.5, rely=0.87, anchor="center") 
     self.raise_entry.focus_set()
-    
+  
   def _enable_action_buttons(self):
     """Enables the main action buttons (Fold, Call, Raise)."""
     self.fold_button.configure(state="normal")
@@ -214,31 +218,43 @@ class PokerGUI:
     self.raise_button.configure(state="normal")
   
   def update_display(self, state):
+    '''TODO: 
+      update/add status label
+      Add logic for calling bots
+      Fix layout
+      Handle PREFLOP betting/initial bets
+      '''
     self.pot_label.configure(text=f"Pot: £{state.pot}")    
     self.current_bet_label.configure(text=str(state.prev_bet))
     
     human_player = state.players[0] 
     self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")  
-    #self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
+    self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
     
     for bot_id in range(1,5):
         bot = state.players[bot_id]
         self.bot_widgets[bot_id]["money_label"].configure(text=f"£{bot.chips}")
     
-    # --- Enable/Disable Action Buttons ---
     if state.current_player.id == self.human_id:
         self._enable_action_buttons()
     else:
         self._disable_action_buttons() 
     
-    # --- Status Labels ---
-    self.status_label.configure(text=f"State: {state.round}")  # "PREFLOP"
-    self.move_label.configure(text="You raised to £20")
+    self.status_label.configure(text=f"Round: {state.round}") 
+    self.move_label.configure(text=f"Most recent player: {state.current_player.id}")
     
-    # --- Check if Active Player is an AI (Bot 1) ---
-    '''if state.current_player.id != self.human_id:
-        # It's Bot 1's turn. Schedule its move in 500ms.
-        self.master.after(500, self._trigger_ai_move)       '''
+    if state.current_player.id != self.human_id:
+        self.master.after(3500, self._trigger_bot_move, state)
+  
+  def _continue_playing(self):
+      pass
+    
+  def _end_game(self):
+      pass
+  
+  def _trigger_bot_move(self,state):
+    action,amount = self.bot_controller.make_decision(state)
+    self._process_action(action,amount)
     
 if __name__ == "__main__":
   root = tk.Tk()
