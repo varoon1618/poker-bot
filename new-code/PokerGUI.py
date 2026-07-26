@@ -5,146 +5,127 @@ from PokerEngine import PokerEngine
 import logging
 from BotController import BotController
 
+ctk.set_appearance_mode("Light")          # Light mode for crispness
+ctk.set_default_color_theme("green")      # Built‑in green theme
+
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 
 class PokerGUI:
   def __init__(self, master, engine):
     self.master = master
     self.engine = engine
-    self.human_id = 0 #player id of the human player
+    self.human_id = 0
     self.bot_controller = BotController()
-    
+
     master.state('zoomed')
-    self.main_frame = ctk.CTkFrame(master, fg_color="#2d9c2d")
+    self.main_frame = ctk.CTkFrame(master, fg_color="#2d9c2d")   # kept original green
     self.main_frame.pack(fill="both", expand=True)
-    
+
     self._build_header()
     self._build_table()
     self._build_bots()
     self._build_player_area()
     self._build_action_controls()
-    self._build_game_controls()
-  
+    #self._build_game_controls()
+
   def _build_header(self):
-    # Title
-    self.title_label = ctk.CTkLabel(self.main_frame, text="Poker", font=("Arial", 24))
-    self.title_label.pack(pady=10)
-    
-    # Status label (displays game state messages like "Preflop", "Flop", etc.)
-    self.status_label = ctk.CTkLabel(self.main_frame, text="Welcome to Poker!")
-    self.status_label.pack(pady=10)
-    
-    # Move label (displays what each player/bot did)
-    self.move_label = ctk.CTkLabel(self.main_frame, text="Latest Move: ",fg_color="#5bb5ec")
-    self.move_label.pack(pady=10)  
-  
-  def _build_player_area(self):
-    # Main frame for the human player's information
-    self.player_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
-    self.player_frame.place(relx=0.5, rely=0.60, anchor="center")
-    
-    # Label: "Your Hand:"
-    self.player_hand_label = ctk.CTkLabel(self.player_frame, text="Your Hand:")
-    self.player_hand_label.grid(row=0, column=0, padx=5, sticky="e")
-    
-    # Label displaying the actual cards (initially "?")
-    self.player_hand_cards = ctk.CTkLabel(self.player_frame, text="?")
-    self.player_hand_cards.grid(row=0, column=1, padx=5, sticky="w")
-    
-    # Label for the player's chip count (spans both columns for full width)
-    self.player_purse_label = ctk.CTkLabel(self.player_frame, text="Your Purse: £1000")
-    self.player_purse_label.grid(row=1, column=0, columnspan=2, padx=5, sticky="we")
-    
-    # Configure grid columns to expand evenly (keeps the layout clean)
-    self.player_frame.grid_columnconfigure(0, weight=1)
-    self.player_frame.grid_columnconfigure(1, weight=1)
-  
-  def _build_action_controls(self):
-    # --- Main action frame (Fold, Call, Raise) ---
-    self.action_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
-    self.action_frame.place(relx=0.5, rely=0.80, anchor="center")
-    
-    self.fold_button = ctk.CTkButton(
-        self.action_frame, 
-        text="Fold", 
-        command=self._trigger_fold,
-        width=80
+    # Title – larger, bold, with subtle shadow effect (via border)
+    self.title_label = ctk.CTkLabel(
+        self.main_frame,
+        text="♠ Poker ♥",
+        font=("Arial", 28, "bold"),
+        text_color="#ffffff"  # white on green background
     )
-    self.fold_button.grid(row=0, column=0, padx=10, pady=5)
-    
-    self.call_button = ctk.CTkButton(
-        self.action_frame, 
-        text="Call", 
-        command=self._trigger_call,
-        width=80
+    self.title_label.pack(pady=(15, 5))
+
+    # Status label – now with a semi‑transparent background and rounded corners
+    self.status_label = ctk.CTkLabel(
+        self.main_frame,
+        text="Welcome to Poker!",
+        font=("Arial", 16, "bold"),
+        fg_color="#3cb371",          # medium sea green, matches theme
+        text_color="white",
+        corner_radius=8,
+        padx=20,
+        pady=5
     )
-    self.call_button.grid(row=0, column=1, padx=10, pady=5)
-    
-    self.raise_button = ctk.CTkButton(
-        self.action_frame, 
-        text="Raise", 
-        command=self._show_raise_entry,
-        width=80
+    self.status_label.pack(pady=(5, 10))
+
+    # Move label – nicer background, bold font
+    self.move_label = ctk.CTkLabel(
+        self.main_frame,
+        text="Latest Move: ",
+        font=("Arial", 13),
+        fg_color="#5bb5ec",           # kept your blue
+        text_color="white",
+        corner_radius=6,
+        padx=15,
+        pady=4
     )
-    self.raise_button.grid(row=0, column=2, padx=10, pady=5)
-    
-    # --- Separate frame for the Raise Entry (hidden by default) ---
-    self.entry_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
-    self.entry_frame.place(relx=0.5, rely=0.87, anchor="center")
-    self.entry_frame.place_forget() 
-    
-    self.raise_entry = ctk.CTkEntry(
-        self.entry_frame, 
-        placeholder_text="Enter Bet Amount", 
-        width=150
-    )
-    self.raise_entry.grid(row=0, column=0, padx=10)
-    
-    self.submit_bet_button = ctk.CTkButton(
-        self.entry_frame, 
-        text="Submit Bet", 
-        command=self._trigger_raise,
-        width=80
-    )
-    self.submit_bet_button.grid(row=1, column=0, padx=10, pady=5)
-  
-  def _build_game_controls(self):
-    self.continue_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
-    self.continue_frame.place(relx=0.5, rely=0.93, anchor="center")
-    
-    self.continue_button = ctk.CTkButton(
-        self.continue_frame, 
-        text="Continue Playing", 
-        command=self._continue_playing,
-        width=150
-    )
-    self.continue_button.grid(row=0, column=0, padx=10, pady=5)
-    
-    self.end_game_button = ctk.CTkButton(
-        self.continue_frame, 
-        text="End Game", 
-        command=self._end_game,
-        width=150,
-        fg_color="#d9534f",  # Red color to signal "quit"
-        hover_color="#c9302c"
-    )
-    self.end_game_button.grid(row=1, column=0, padx=10, pady=5)
-  
+    self.move_label.pack(pady=(5, 10))
+
+  # ------------------- COMMUNITY TABLE -------------------
   def _build_table(self):
-    self.community_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
-    self.community_frame.place(relx=0.5, rely=0.3, anchor="center")
+    self.community_frame = ctk.CTkFrame(
+        self.main_frame,
+        fg_color="#d4edda",           # softer light green (was #ccffcc)
+        corner_radius=12,
+        border_width=2,
+        border_color="#28a745",
+        width = 200
+    )
+    self.community_frame.place(relx=0.5, rely=0.30, anchor="center")
+    self.community_frame.grid_propagate(False)
+    self.community_frame.grid_columnconfigure(0, weight=1)
     
-    self.pot_label = ctk.CTkLabel(self.community_frame, text="Pot: £0")
-    self.pot_label.grid(row=0, column=0, columnspan=2, sticky="we")
-    
-    ctk.CTkLabel(self.community_frame, text="Community Cards:").grid(row=1, column=0, sticky="e")
-    self.community_cards_label = ctk.CTkLabel(self.community_frame, text="?")
-    self.community_cards_label.grid(row=1, column=1, sticky="w")
-    
-    ctk.CTkLabel(self.community_frame, text="Current Bet:").grid(row=2, column=0, sticky="e")
-    self.current_bet_label = ctk.CTkLabel(self.community_frame, text="0")
-    self.current_bet_label.grid(row=2, column=1, sticky="w")
-  
+    # Pot label – larger and bold
+    self.pot_label = ctk.CTkLabel(
+        self.community_frame,
+        text="Pot: £0",
+        font=("Arial", 16, "bold"),
+        text_color="#155724",
+        wraplength = 80
+    )
+    self.pot_label.grid(row=0, column=0, columnspan=2, sticky="", pady=5)
+
+    # Community cards – with better spacing
+    ctk.CTkLabel(
+        self.community_frame,
+        text="Community Cards:",
+        font=("Arial", 12, "bold"),
+        text_color="#155724"
+    ).grid(row=1, column=0, sticky="w", padx=5, pady=2)
+
+    self.community_cards_label = ctk.CTkLabel(
+        self.community_frame,
+        text="?",
+        font=("Arial", 12),
+        text_color="#155724"
+    )
+    self.community_cards_label.grid(row=1, column=1, sticky="w", padx=5, pady=2)
+
+    ctk.CTkLabel(
+        self.community_frame,
+        text="Current Bet:",
+        font=("Arial", 12, "bold"),
+        text_color="#155724"
+    ).grid(row=2, column=0, sticky="w", padx=5, pady=2)
+
+    self.current_bet_label = ctk.CTkLabel(
+        self.community_frame,
+        text="0",
+        font=("Arial", 12),
+        text_color="#155724"
+    )
+    self.current_bet_label.grid(row=2, column=1, sticky="", padx=5, pady=2)
+
+    # Add some internal padding to the frame
+    for child in self.community_frame.winfo_children():
+        child.grid_configure(pady=3)   # consistent vertical spacing
+
+  # ------------------- BOT WIDGETS -------------------
   def _build_bots(self):
     bot_positions = [
         {"id": 4, "name": "Bot 4", "relx": 0.15, "rely": 0.25, "anchor": "e"},
@@ -152,115 +133,334 @@ class PokerGUI:
         {"id": 2, "name": "Bot 2", "relx": 0.85, "rely": 0.60, "anchor": "w"},
         {"id": 1, "name": "Bot 1", "relx": 0.85, "rely": 0.25, "anchor": "w"},
     ]
-    
-    self.bot_widgets = {} 
-    
+
+    self.bot_widgets = {}
+
     for pos in bot_positions:
       pid = pos["id"]
-      frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
+      frame = ctk.CTkFrame(
+          self.main_frame,
+          fg_color="#d4edda",
+          corner_radius=10,
+          border_width=1,
+          border_color="#28a745",
+          width = 150
+      )
       frame.place(relx=pos["relx"], rely=pos["rely"], anchor=pos["anchor"])
-      
-      # Store everything in a nested dict for easy access later
+      frame.grid_propagate(False)     
+      frame.grid_columnconfigure(0, weight=1)
+           
+      # Store widgets
       self.bot_widgets[pid] = {
           "frame": frame,
-          "name_label": ctk.CTkLabel(frame, text=pos["name"]),
-          "money_label": ctk.CTkLabel(frame, text="£1000"),
-          "action_label": ctk.CTkLabel(frame, text="Action: "),
-          "hand_label": ctk.CTkLabel(frame, text="Hand: ?")
+          "name_label": ctk.CTkLabel(
+              frame,
+              text=pos["name"],
+              font=("Arial", 16, "bold"),
+              text_color="#155724"
+          ),
+          "money_label": ctk.CTkLabel(
+              frame,
+              text="£1000",
+              font=("Arial", 14),
+              text_color="#155724"
+          ),
+          "action_label": ctk.CTkLabel(
+              frame,
+              text="Action: ",
+              font=("Arial", 14),
+              text_color="#155724"
+          ),
+          "hand_label": ctk.CTkLabel(
+              frame,
+              text="Hand: ?",
+              font=("Arial", 14),
+              text_color="#155724"
+          )
       }
-      
-      self.bot_widgets[pid]["name_label"].grid(row=0, column=0, padx=5)
-      self.bot_widgets[pid]["money_label"].grid(row=1, column=0, padx=5)
-      self.bot_widgets[pid]["action_label"].grid(row=2, column=0, padx=5)
-      self.bot_widgets[pid]["hand_label"].grid(row=3, column=0, padx=5)
-  
+
+      # Grid layout with better spacing
+      self.bot_widgets[pid]["name_label"].grid(row=0, column=0, padx=8, pady=(6, 2), sticky="")
+      self.bot_widgets[pid]["money_label"].grid(row=1, column=0, padx=8, pady=2, sticky="")
+      self.bot_widgets[pid]["action_label"].grid(row=2, column=0, padx=8, pady=2, sticky="w")
+      self.bot_widgets[pid]["hand_label"].grid(row=3, column=0, padx=8, pady=(2, 6), sticky="w")
+
+  # ------------------- HUMAN PLAYER AREA -------------------
+  def _build_player_area(self):
+    self.player_frame = ctk.CTkFrame(
+        self.main_frame,
+        fg_color="#d4edda",
+        corner_radius=12,
+        border_width=2,
+        border_color="#28a745",
+    )
+    self.player_frame.place(relx=0.5, rely=0.60, anchor="center")
+
+    # "Your Hand:" – bold
+    self.player_hand_label = ctk.CTkLabel(
+        self.player_frame,
+        text="Your Hand:",
+        font=("Arial", 16, "bold"),
+        text_color="#155724"
+    )
+    self.player_hand_label.grid(row=0, column=0, padx=8, pady=8, sticky="e")
+
+    self.player_hand_cards = ctk.CTkLabel(
+        self.player_frame,
+        text="?",
+        font=("Arial", 16),
+        text_color="#155724"
+    )
+    self.player_hand_cards.grid(row=0, column=1, padx=8, pady=8, sticky="w")
+
+    self.player_purse_label = ctk.CTkLabel(
+        self.player_frame,
+        text="Your Purse: £1000",
+        font=("Arial", 16, "bold"),
+        text_color="#155724"
+    )
+    self.player_purse_label.grid(row=1, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="we")
+
+    self.player_frame.grid_columnconfigure(0, weight=1)
+    self.player_frame.grid_columnconfigure(1, weight=1)
+
+  def _build_action_controls(self):
+    # Main action frame (Fold, Call, Raise)
+    self.action_frame = ctk.CTkFrame(
+        self.main_frame,
+        fg_color="#d4edda",
+        corner_radius=12,
+        border_width=2,
+        border_color="#28a745"
+    )
+    self.action_frame.place(relx=0.5, rely=0.70, anchor="center")
+
+    # Buttons with hover effects and rounded corners
+    self.fold_button = ctk.CTkButton(
+        self.action_frame,
+        text="Fold",
+        command=self._trigger_fold,
+        width=90,
+        height=35,
+        corner_radius=8,
+        fg_color="#dc3545",          # red for fold
+        hover_color="#c82333",
+        text_color="white"
+    )
+    self.fold_button.grid(row=0, column=0, padx=10, pady=8)
+
+    self.call_button = ctk.CTkButton(
+        self.action_frame,
+        text="Call",
+        command=self._trigger_call,
+        width=90,
+        height=35,
+        corner_radius=8,
+        fg_color="#0e74e0",          # green for call
+        hover_color="#0757ac",
+        text_color="white"
+    )
+    self.call_button.grid(row=0, column=1, padx=10, pady=8)
+
+    self.raise_button = ctk.CTkButton(
+        self.action_frame,
+        text="Raise",
+        command=self._show_raise_entry,
+        width=90,
+        height=35,
+        corner_radius=8,
+        fg_color="#ffc107",          # yellow/amber for raise
+        hover_color="#e0a800",
+        text_color="black"
+    )
+    self.raise_button.grid(row=0, column=2, padx=10, pady=8)
+
+    # --- Raise Entry (separate frame, hidden by default) ---
+    self.entry_frame = ctk.CTkFrame(
+        self.main_frame,
+        fg_color="#d4edda",
+        corner_radius=10,
+        border_width=1,
+        border_color="#28a745"
+    )
+    self.entry_frame.place(relx=0.5, rely=0.8, anchor="center")
+    self.entry_frame.place_forget()
+
+    self.raise_entry = ctk.CTkEntry(
+        self.entry_frame,
+        placeholder_text="Enter Bet Amount",
+        width=160,
+        height=30,
+        corner_radius=8,
+        border_color="#28a745",
+        fg_color="white"
+    )
+    self.raise_entry.grid(row=0, column=0, padx=15, pady=(10, 5))
+
+    self.submit_bet_button = ctk.CTkButton(
+        self.entry_frame,
+        text="Submit Bet",
+        command=self._trigger_raise,
+        width=90,
+        height=32,
+        corner_radius=8,
+        fg_color="#17a2b8",          # teal for submit
+        hover_color="#138496",
+        text_color="white"
+    )
+    self.submit_bet_button.grid(row=1, column=0, padx=15, pady=(0, 10))
+
+  # ------------------- GAME CONTROLS (Continue / End) -------------------
+  def _build_game_controls(self):
+    self.continue_frame = ctk.CTkFrame(
+        self.main_frame,
+        fg_color="#d4edda",
+        corner_radius=12,
+        border_width=2,
+        border_color="#28a745"
+    )
+    self.continue_frame.place(relx=0.5, rely=0.93, anchor="center")
+
+    self.continue_button = ctk.CTkButton(
+        self.continue_frame,
+        text="Continue Playing",
+        command=self._continue_playing,
+        width=160,
+        height=36,
+        corner_radius=8,
+        fg_color="#28a745",
+        hover_color="#218838",
+        text_color="white"
+    )
+    self.continue_button.grid(row=0, column=0, padx=12, pady=8)
+
+    self.end_game_button = ctk.CTkButton(
+        self.continue_frame,
+        text="End Game",
+        command=self._end_game,
+        width=160,
+        height=36,
+        corner_radius=8,
+        fg_color="#d9534f",          # kept red
+        hover_color="#c9302c",
+        text_color="white"
+    )
+    self.end_game_button.grid(row=1, column=0, padx=12, pady=(0, 8))
+
   def _trigger_call(self):
     self._process_action("CALL")
     self._disable_action_buttons()
-  
+
   def _trigger_fold(self):
     self._process_action("FOLD")
     self._disable_action_buttons()
-  
+
   def _trigger_raise(self):
     amount = int(self.raise_entry.get())
-    self._process_action("RAISE",amount=amount)
+    self._process_action("RAISE", amount=amount)
     self._disable_action_buttons()
-  
-  def _format_cards(self,cards):
-    out = ""
-    for c in cards:
-      out += str(c)
-      out += " "
-    return out
 
-  def _process_action(self,action,amount=0):
-    self.engine.handle_action(action,amount)
-  
+  def _format_cards(self, cards):
+    return " ".join(str(c) for c in cards)
+
+  def _process_action(self, action, amount=0):
+    self.engine.handle_action(action, amount)
+
   def _disable_action_buttons(self):
     self.fold_button.configure(state="disabled")
     self.call_button.configure(state="disabled")
     self.raise_button.configure(state="disabled")
-    
-    # Also hide the raise entry box if it happens to be open
     self.entry_frame.place_forget()
     self.raise_entry.delete(0, "end")
-  
+
   def _show_raise_entry(self):
     self.raise_entry.delete(0, "end")
-    self.entry_frame.place(relx=0.5, rely=0.87, anchor="center") 
+    self.entry_frame.place(relx=0.5, rely=0.87, anchor="center")
     self.raise_entry.focus_set()
-  
+
   def _enable_action_buttons(self):
-    """Enables the main action buttons (Fold, Call, Raise)."""
     self.fold_button.configure(state="normal")
     self.call_button.configure(state="normal")
     self.raise_button.configure(state="normal")
-  
+
   def update_display(self, state):
-    '''TODO: 
-      update/add status label
-      Add logic for calling bots
-      Fix layout
-      Handle PREFLOP betting/initial bets
-      '''
-    self.pot_label.configure(text=f"Pot: £{state.pot}")    
+    self.pot_label.configure(text=f"Pot: £{state.pot}")
     self.current_bet_label.configure(text=str(state.prev_bet))
-    
-    human_player = state.players[0] 
-    self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")  
+
+    human_player = state.players[0]
+    self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")
     self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
+
+    for bot_id in range(1, 5):
+      bot = state.players[bot_id]
+      self.bot_widgets[bot_id]["money_label"].configure(text=f"£{bot.chips}")
     
-    for bot_id in range(1,5):
-        bot = state.players[bot_id]
-        self.bot_widgets[bot_id]["money_label"].configure(text=f"£{bot.chips}")
+    self._un_highlight_all_bots()
     
     if state.current_player.id == self.human_id:
-        self._enable_action_buttons()
+      self._enable_action_buttons()
     else:
-        self._disable_action_buttons() 
+      bot_id = state.current_player.id
+      action = state.current_player_action
+      amount = state.prev_bet
+      self._update_bot_action_label(bot_id,action,amount)
+      
+      self._highlight_bot_frame(bot_id)
+      self._disable_action_buttons()
+      
     
-    self.status_label.configure(text=f"Round: {state.round}") 
+    self.status_label.configure(text=f"Round: {state.round}")
     self.move_label.configure(text=f"Most recent player: {state.current_player.id}")
-    
+
     if state.current_player.id != self.human_id:
-        self.master.after(3500, self._trigger_bot_move, state)
+      self.master.after(3500, self._trigger_bot_move, state)
+      
   
+  def _update_bot_action_label(self,id,action,amount):
+    s = ""
+    if action == "CALL":
+      s = f'Action: Called £{amount}'
+    
+    elif action == 'FOLD':
+      s = f'Action: Folded'
+    
+    elif action == "RAISE":
+      s = f'Action: Raised £{amount}'
+    self.bot_widgets[id]['action_label'].configure(text=s)
+    
   def _continue_playing(self):
-      pass
-    
+    pass
+
   def _end_game(self):
-      pass
+    pass
+
+  def _trigger_bot_move(self, state):
+    action, amount = self.bot_controller.make_decision(state)
+    self._process_action(action, amount)
   
-  def _trigger_bot_move(self,state):
-    action,amount = self.bot_controller.make_decision(state)
-    self._process_action(action,amount)
+  def _highlight_bot_frame(self, bot_id, thick=True):
+    default_border_color = "#28a745"
+    highlight_color = "red"
+    default_width = 1
+    highlight_width = 3   # thicker when highlighted
     
-if __name__ == "__main__":
-  root = tk.Tk()
-  poker_engine = PokerEngine()
-  gui = PokerGUI(root,engine=poker_engine)
-  poker_engine.register_listener(gui.update_display)
-  poker_engine.initialise_game()
+    if bot_id in self.bot_widgets:
+        self.bot_widgets[bot_id]['frame'].configure(
+            border_color=highlight_color,
+            border_width=highlight_width if thick else default_width
+        )
   
-  root.mainloop()
+  def _un_highlight_all_bots(self):
+    default_border_color = "#28a745"
+    for pid in self.bot_widgets:
+            self.bot_widgets[pid]['frame'].configure(
+                border_color=default_border_color,
+                border_width=1
+            )
+if __name__ == "__main__":
+    root = tk.Tk()
+    poker_engine = PokerEngine()
+    gui = PokerGUI(root, engine=poker_engine)
+    poker_engine.register_listener(gui.update_display)
+    poker_engine.initialise_game()
+    root.mainloop()

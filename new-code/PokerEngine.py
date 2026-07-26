@@ -179,6 +179,7 @@ class PokerEngine:
       
       player.chips -= self.prev_bet
       self.pot += self.prev_bet
+      self.current_player_action = 'CALL'
       return
       
   
@@ -189,6 +190,7 @@ class PokerEngine:
     player.chips -= amount
     self.prev_bet = amount
     self.pot += amount
+    self.current_player_action='RAISE'
     
     if self.num_raises < self.MAX_RAISES_ROUND:
       self.num_raises +=1
@@ -201,6 +203,7 @@ class PokerEngine:
     if not(player.has_folded):
       raise ValueError("Player already folded")
     
+    self.current_player_action = 'FOLD'
     player.has_folded = True
     return
   
