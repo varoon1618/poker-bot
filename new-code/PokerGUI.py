@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from tkinter import messagebox
 import tkinter as tk
-
+from PokerEngine import PokerEngine
 
 class PokerGUI:
   def __init__(self, master, engine):
@@ -80,7 +80,7 @@ class PokerGUI:
     self.raise_button = ctk.CTkButton(
         self.action_frame, 
         text="Raise", 
-        command=self.show_raise_entry,
+        command=self._show_raise_entry,
         width=80
     )
     self.raise_button.grid(row=0, column=2, padx=10, pady=5)
@@ -88,7 +88,7 @@ class PokerGUI:
     # --- Separate frame for the Raise Entry (hidden by default) ---
     self.entry_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
     self.entry_frame.place(relx=0.5, rely=0.87, anchor="center")
-    self.entry_frame.grid_remove()  # Hides it initially (unlike pack_forget)
+    self.entry_frame.place_forget() 
     
     self.raise_entry = ctk.CTkEntry(
         self.entry_frame, 
@@ -112,7 +112,7 @@ class PokerGUI:
     self.continue_button = ctk.CTkButton(
         self.continue_frame, 
         text="Continue Playing", 
-        command=self.continue_playing,
+        command=self._continue_playing,
         width=150
     )
     self.continue_button.grid(row=0, column=0, padx=10, pady=5)
@@ -120,13 +120,19 @@ class PokerGUI:
     self.end_game_button = ctk.CTkButton(
         self.continue_frame, 
         text="End Game", 
-        command=self.end_game,
+        command=self._end_game,
         width=150,
         fg_color="#d9534f",  # Red color to signal "quit"
         hover_color="#c9302c"
     )
     self.end_game_button.grid(row=1, column=0, padx=10, pady=5)
-    
+  
+  def _continue_playing(self):
+    pass
+  
+  def _end_game(self):
+    pass
+  
   def _build_table(self):
     self.community_frame = ctk.CTkFrame(self.main_frame, fg_color="#ccffcc")
     self.community_frame.place(relx=0.5, rely=0.3, anchor="center")
@@ -172,31 +178,35 @@ class PokerGUI:
       self.bot_widgets[pid]["hand_label"].grid(row=3, column=0, padx=5)
   
   def _trigger_call(self):
-    self._process_action(self.human_id,"CALL")
+    self._process_action("CALL")
     self._disable_action_buttons()
   
   def _trigger_fold(self):
-    self._process_action(self.human_id,"FOLD")
+    self._process_action("FOLD")
     self._disable_action_buttons()
   
   def _trigger_raise(self):
     amount = int(self.raise_entry.get())
-    self._process_action(self.human_id,"RAISE",amount=amount)
+    self._process_action("RAISE",amount=amount)
     self._disable_action_buttons()
     
-  def _process_action(self,id,action,amount=None):
-    self.engine.handle_action(id,action,amount)
+  def _process_action(self,action,amount=0):
+    self.engine.handle_action(action,amount)
   
   def _disable_action_buttons(self):
-    """Disables the main action buttons (Fold, Call, Raise)."""
     self.fold_button.configure(state="disabled")
     self.call_button.configure(state="disabled")
     self.raise_button.configure(state="disabled")
     
     # Also hide the raise entry box if it happens to be open
-    self.entry_frame.grid_remove()
+    self.entry_frame.place_forget()
     self.raise_entry.delete(0, "end")
   
+  def _show_raise_entry(self):
+    self.raise_entry.delete(0, "end")
+    self.entry_frame.place(relx=0.5, rely=0.87, anchor="center") 
+    self.raise_entry.focus_set()
+    
   def _enable_action_buttons(self):
     """Enables the main action buttons (Fold, Call, Raise)."""
     self.fold_button.configure(state="normal")
@@ -204,35 +214,37 @@ class PokerGUI:
     self.raise_button.configure(state="normal")
   
   def update_display(self, state):
-    self.pot_label.config(text=f"Pot: £{state.pot}")    
-    self.current_bet_label.config(text=str(state.current_bet))
+    self.pot_label.configure(text=f"Pot: £{state.pot}")    
+    self.current_bet_label.configure(text=str(state.prev_bet))
     
     human_player = state.players[0] 
-    self.player_purse_label.config(text=f"Your Purse: £{human_player.chips}")  # "£80"
-    self.player_hand_cards.config(text=self._format_cards(human_player.hand))
+    self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")  
+    #self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
     
-    # --- Update Bots (Loop through them) ---
     for bot_id in range(1,5):
         bot = state.players[bot_id]
-        self.bot_widgets[bot_id]["money_label"].config(text=f"£{bot.chips}")
+        self.bot_widgets[bot_id]["money_label"].configure(text=f"£{bot.chips}")
     
     # --- Enable/Disable Action Buttons ---
-    # It is now Bot 1's turn, so disable human buttons
-    if state.current_player_idx == self.human_id:
+    if state.current_player.id == self.human_id:
         self._enable_action_buttons()
     else:
-        self._disable_action_buttons()  # <-- This runs (buttons are disabled)
+        self._disable_action_buttons() 
     
     # --- Status Labels ---
-    self.status_label.config(text=f"State: {state.state}")  # "PREFLOP"
-    self.move_label.config(text="You raised to £20")
+    self.status_label.configure(text=f"State: {state.round}")  # "PREFLOP"
+    self.move_label.configure(text="You raised to £20")
     
     # --- Check if Active Player is an AI (Bot 1) ---
-    if state.current_player_idx != self.human_id:
+    '''if state.current_player.id != self.human_id:
         # It's Bot 1's turn. Schedule its move in 500ms.
-        self.master.after(500, self._trigger_ai_move)        
+        self.master.after(500, self._trigger_ai_move)       '''
     
 if __name__ == "__main__":
   root = tk.Tk()
-  gui = PokerGUI(root,engine=None)
+  poker_engine = PokerEngine()
+  gui = PokerGUI(root,engine=poker_engine)
+  poker_engine.register_listener(gui.update_display)
+  poker_engine.initialise_game()
+  
   root.mainloop()

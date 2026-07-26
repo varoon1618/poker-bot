@@ -1,6 +1,8 @@
 from itertools import product
 import random
+import logging
 
+logger = logging.getLogger(__name__)
 class Card:
   def __init__(self,suit,value):
     self.suit = suit
@@ -16,7 +18,7 @@ class Deck:
     self.cards = [Card(suit=s,value=v) for s,v in product(suits,values)]
   
   def shuffle(self):
-    self.cards = random.shuffle(self.cards)
+    random.shuffle(self.cards)
     return
   
   def draw(self):
@@ -52,14 +54,15 @@ class Player:
     return not(self.has_folded) and not(self.is_all_in)
 
 class GameState:
-  def __init__(self):
-    self.pot = 0
-    self.current_player = None
-    self.round = None
-    self.community_cards = []
-    self.prev_bet = 0
-    self.current_player_action = None
-    self.players = []
+  def __init__(self,**kwargs):
+    self.pot = kwargs.get('pot',0)
+    self.current_player = kwargs.get('current_player')
+    self.round = kwargs.get('round')
+    self.community_cards = kwargs.get('community_cards',[])
+    self.prev_bet = kwargs.get('prev_bet',0)
+    self.current_player_action = kwargs.get('current_player_action')
+    self.players = kwargs.get('players',[])
+    
   
   @classmethod
   def from_game_engine(cls,engine):
@@ -69,6 +72,7 @@ class GameState:
     round = engine.round
     prev_bet = engine.prev_bet
     current_player_action = engine.current_player_action
+    
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
                round = round, prev_bet=prev_bet,current_player_action=current_player_action,
                players = engine.players)
@@ -81,13 +85,14 @@ class PokerEngine:
     self.players = []
     self.community_cards = []
     self.deck = Deck()
-    self.current_player_idx = None
+    self.current_player_idx = 0
     self.round = None
     self.has_acted = set() #set of players that have already acted this round
     self.num_raises = 0
     self.MAX_RAISES_ROUND = 2 #max raises PER ROUND
     self.prev_bet = 0
     self.current_player_action = None
+    
   
   def register_listener(self,callback):
     self.listeners.append(callback)
