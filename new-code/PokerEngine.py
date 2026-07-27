@@ -26,6 +26,7 @@ class PokerEngine:
     self.prev_bet = 5
     self.bot_controller = BotController()
     self.exception = None
+    self.new_round = None
   
   def register_listener(self,callback):
     self.listeners.append(callback)
@@ -41,12 +42,20 @@ class PokerEngine:
     return current_state
     
   def add_players(self):
+    bot1 =  Player(id=1,is_human=False)
+    self.players.append(bot1)
+    
+    bot2 = Player(id=2,is_human=False)
+    self.players.append(bot2)
+    
     human = Player(id=0,is_human=True)
     self.players.append(human)
     
-    for i in range(1,5):
-      bot = Player(id=i,is_human=False)
-      self.players.append(bot)
+    bot3 = Player(id=3,is_human=False)
+    self.players.append(bot3)
+    
+    bot4 = Player(id=4,is_human=False)
+    self.players.append(bot4)
       
   def initialise_game(self):
     self.add_players()
@@ -58,7 +67,7 @@ class PokerEngine:
     
     self.round = "PREFLOP"
     
-    self.current_player_idx = 1
+    self.current_player_idx = 0
     
     self._broadcast_state()
 
@@ -78,9 +87,9 @@ class PokerEngine:
     return None
   
   def _get_first_actor_idx(self):
-    bot1 = self.players[1]
+    bot1 = self.players[0]
     if bot1.is_active:
-      return 1
+      return 0
     
     return self._get_next_active_player_idx(start_index=0)
   
@@ -128,11 +137,15 @@ class PokerEngine:
       pass
     
     self.has_acted = set()
-    self.prev_bet = 0
+    self.prev_bet = 5
     self.num_raises = 0
     self.exception = None
     self.current_player_idx = self._get_first_actor_idx()
+    
     self._broadcast_state()
+    
+    for p in self.players:
+          p.latest_action = None
   
   def handle_action(self,action,amount=0):
     '''
@@ -140,6 +153,8 @@ class PokerEngine:
           Validation of input action
     '''
     self.exception = None
+    self.new_round = False
+    
     curr_player = self.players[self.current_player_idx]
     
     if action == 'CALL':
@@ -174,6 +189,7 @@ class PokerEngine:
     self.current_player_idx = self._get_next_active_player_idx()
     
     if self._check_round_over():
+      self.new_round = True
       self._advance_round()
     else:
       self._broadcast_state()
@@ -208,7 +224,7 @@ class PokerEngine:
     
     player.chips -= amount
     player.latest_action = 'RAISE'
-    player.current_bet = self.prev_bet
+    player.current_bet = amount
     
     if self.num_raises < self.MAX_RAISES_ROUND:
       self.num_raises +=1

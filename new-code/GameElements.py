@@ -79,7 +79,7 @@ class GameState:
     self.players = kwargs.get('players',[])
     self.num_raises = kwargs.get('num_raises',0)
     self.exception = kwargs.get('exception',None)
-    
+    self.new_round = kwargs.get('new_round',False)
   
   @classmethod
   def from_game_engine(cls,engine):
@@ -90,8 +90,9 @@ class GameState:
     prev_bet = engine.prev_bet
     num_raises = engine.num_raises
     exception = engine.exception
+    new_round = engine.new_round
     
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
                round = round, prev_bet=prev_bet,players = engine.players, num_raises=num_raises,
-               exception = exception)
+               exception = exception,new_round=new_round)
 

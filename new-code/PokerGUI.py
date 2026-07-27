@@ -350,7 +350,6 @@ class PokerGUI:
 
   def _trigger_call(self):
     self._process_action("CALL")
-    #self._disable_action_buttons()
 
   def _trigger_fold(self):
     self._process_action("FOLD")
@@ -396,16 +395,24 @@ class PokerGUI:
     human_player = state.players[0]
     self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")
     self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
-
-    for bot_id in range(1, 5):
-      bot = state.players[bot_id]
-      self._update_bot_money_label(bot)
-      self._update_bot_action_label(bot)
+    
+    logger.info(f'round:{state.round}, new_round:{state.new_round}')
+    
+    for i in range(5):
+      player = state.players[i]
+      if player.id == self.human_id:
+        continue
+      
+      self._update_bot_money_label(player)
+      self._update_bot_action_label(player)
     
     self._un_highlight_all_bots()
     
     if state.current_player.id == self.human_id:
-      self._enable_action_buttons()
+      if state.round == 'PREFLOP':
+        self.call_button.configure(state="normal")
+      else:
+        self._enable_action_buttons()
     else:
       self._highlight_bot_frame(state.current_player.id)
       self._disable_action_buttons()
@@ -423,6 +430,9 @@ class PokerGUI:
       self.master.after(2500, self._trigger_bot_move, state)   
   
   
+  def _clear_bot_action_label(self,bot):    
+    self.bot_widgets[bot.id]['action_label'].configure(text="Action: ") 
+    
   def _update_bot_money_label(self,bot):
     self.bot_widgets[bot.id]["money_label"].configure(text=f"£{bot.chips}")
     
