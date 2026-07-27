@@ -5,9 +5,11 @@ from GameElements import Card,Deck,Player,GameState
 from BotController import BotController
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-      
+
 class PokerEngine:
+  '''TODO: Add logging'''
   def __init__(self):
     self.listeners = []
     self.pot = 0
@@ -19,7 +21,7 @@ class PokerEngine:
     self.has_acted = set() #set of players that have already acted this round
     self.num_raises = 0
     self.MAX_RAISES_ROUND = 2 #max raises PER ROUND
-    self.prev_bet = 0
+    self.prev_bet = 5
     self.current_player_action = None
     self.bot_controller = BotController()
     
@@ -30,6 +32,8 @@ class PokerEngine:
   def _broadcast_state(self):
     for callback in self.listeners:
       callback(self.get_game_state())
+    logger.info("BROADCASTNG STATE")
+
   
   def get_game_state(self):
     '''TODO: ADD more attrs to game state'''
@@ -139,6 +143,7 @@ class PokerEngine:
     if action == 'CALL':
       try:
         self.handle_call(curr_player)
+        logger.info(f'Player{curr_player.id} called successfully')
       except ValueError as e:
         #Add log statement
         self._broadcast_state()
@@ -146,7 +151,9 @@ class PokerEngine:
           
     elif action == 'RAISE':
       try:
-        self.handle_raise(curr_player,amount)    
+        self.handle_raise(curr_player,amount)
+        logger.info(f'Player{curr_player.id} raised {amount}')
+            
       except ValueError as e:
         self._broadcast_state()
         return
@@ -159,13 +166,13 @@ class PokerEngine:
         return
     
     self.has_acted.add(curr_player)
-    
     self.current_player_idx = self._get_next_active_player_idx()
     
     if self._check_round_over():
       self._advance_round()
     else:
       self._broadcast_state()
+    
   
   def bot_action(self):
     curr_player = self.players[self.current_player_idx]
@@ -180,6 +187,8 @@ class PokerEngine:
       player.chips -= self.prev_bet
       self.pot += self.prev_bet
       self.current_player_action = 'CALL'
+      player.latest_action = 'CALL'
+      player.current_bet = self.prev_bet
       return
       
   
@@ -187,10 +196,13 @@ class PokerEngine:
     if player.chips < amount:
       raise ValueError("Too few chips")
     
-    player.chips -= amount
     self.prev_bet = amount
     self.pot += amount
     self.current_player_action='RAISE'
+    
+    player.chips -= amount
+    player.latest_action = 'RAISE'
+    player.current_bet = amount
     
     if self.num_raises < self.MAX_RAISES_ROUND:
       self.num_raises +=1
@@ -204,6 +216,7 @@ class PokerEngine:
       raise ValueError("Player already folded")
     
     self.current_player_action = 'FOLD'
+    player.latest_action = 'FOLD'
     player.has_folded = True
     return
   

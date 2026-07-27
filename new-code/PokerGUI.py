@@ -74,9 +74,10 @@ class PokerGUI:
         corner_radius=12,
         border_width=2,
         border_color="#28a745",
-        width = 200
+        width = 275,
+        height = 150
     )
-    self.community_frame.place(relx=0.5, rely=0.30, anchor="center")
+    self.community_frame.place(relx=0.5, rely=0.35, anchor="center")
     self.community_frame.grid_propagate(False)
     self.community_frame.grid_columnconfigure(0, weight=1)
     
@@ -94,14 +95,14 @@ class PokerGUI:
     ctk.CTkLabel(
         self.community_frame,
         text="Community Cards:",
-        font=("Arial", 12, "bold"),
+        font=("Arial", 16, "bold"),
         text_color="#155724"
     ).grid(row=1, column=0, sticky="w", padx=5, pady=2)
 
     self.community_cards_label = ctk.CTkLabel(
         self.community_frame,
         text="?",
-        font=("Arial", 12),
+        font=("Arial", 16),
         text_color="#155724"
     )
     self.community_cards_label.grid(row=1, column=1, sticky="w", padx=5, pady=2)
@@ -109,14 +110,14 @@ class PokerGUI:
     ctk.CTkLabel(
         self.community_frame,
         text="Current Bet:",
-        font=("Arial", 12, "bold"),
+        font=("Arial", 16, "bold"),
         text_color="#155724"
     ).grid(row=2, column=0, sticky="w", padx=5, pady=2)
 
     self.current_bet_label = ctk.CTkLabel(
         self.community_frame,
         text="0",
-        font=("Arial", 12),
+        font=("Arial", 16),
         text_color="#155724"
     )
     self.current_bet_label.grid(row=2, column=1, sticky="", padx=5, pady=2)
@@ -349,23 +350,26 @@ class PokerGUI:
 
   def _trigger_call(self):
     self._process_action("CALL")
-    self._disable_action_buttons()
+    #self._disable_action_buttons()
 
   def _trigger_fold(self):
     self._process_action("FOLD")
-    self._disable_action_buttons()
+    #self._disable_action_buttons()
 
   def _trigger_raise(self):
     amount = int(self.raise_entry.get())
     self._process_action("RAISE", amount=amount)
-    self._disable_action_buttons()
+    self._clear_raise_entry()
 
   def _format_cards(self, cards):
     return " ".join(str(c) for c in cards)
 
   def _process_action(self, action, amount=0):
     self.engine.handle_action(action, amount)
-
+  
+  def _clear_raise_entry(self):
+    self.raise_entry.delete(0,"end")
+    
   def _disable_action_buttons(self):
     self.fold_button.configure(state="disabled")
     self.call_button.configure(state="disabled")
@@ -386,47 +390,57 @@ class PokerGUI:
   def update_display(self, state):
     self.pot_label.configure(text=f"Pot: £{state.pot}")
     self.current_bet_label.configure(text=str(state.prev_bet))
-
+    
+    self.community_cards_label.configure(text=self._format_cards(state.community_cards))
+    
     human_player = state.players[0]
     self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")
     self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
 
     for bot_id in range(1, 5):
       bot = state.players[bot_id]
-      self.bot_widgets[bot_id]["money_label"].configure(text=f"£{bot.chips}")
+      #self.bot_widgets[bot_id]["money_label"].configure(text=f"£{bot.chips}")
+      self._update_bot_money_label(bot)
+      self._update_bot_action_label(bot)
     
     self._un_highlight_all_bots()
     
     if state.current_player.id == self.human_id:
       self._enable_action_buttons()
     else:
-      bot_id = state.current_player.id
-      action = state.current_player_action
-      amount = state.prev_bet
-      self._update_bot_action_label(bot_id,action,amount)
+      #bot_id = state.current_player.id
+      #action = state.prev_action
+      #amount = state.prev_bet
+      #self._update_bot_action_label(bot_id,action,amount)
       
-      self._highlight_bot_frame(bot_id)
+      self._highlight_bot_frame(state.current_player.id)
       self._disable_action_buttons()
       
     
     self.status_label.configure(text=f"Round: {state.round}")
-    self.move_label.configure(text=f"Most recent player: {state.current_player.id}")
+    t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id} turn'
+    self.move_label.configure(text=t)
 
     if state.current_player.id != self.human_id:
-      self.master.after(3500, self._trigger_bot_move, state)
-      
+      self.master.after(2500, self._trigger_bot_move, state)   
   
-  def _update_bot_action_label(self,id,action,amount):
-    s = ""
-    if action == "CALL":
-      s = f'Action: Called £{amount}'
+  
+  def _update_bot_money_label(self,bot):
+    self.bot_widgets[bot.id]["money_label"].configure(text=f"£{bot.chips}")
     
-    elif action == 'FOLD':
+  def _update_bot_action_label(self,bot):
+    s = "Action: "
+    if bot.latest_action == "CALL":
+       s = f'Action: Called £{bot.current_bet}'
+        
+    elif bot.latest_action == 'FOLD':
       s = f'Action: Folded'
+        
+    elif bot.latest_action == "RAISE":
+      s = f'Action: Raised £{bot.current_bet}'
     
-    elif action == "RAISE":
-      s = f'Action: Raised £{amount}'
-    self.bot_widgets[id]['action_label'].configure(text=s)
+    self.bot_widgets[bot.id]['action_label'].configure(text=s) 
+    
     
   def _continue_playing(self):
     pass
