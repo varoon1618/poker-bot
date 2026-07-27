@@ -311,7 +311,7 @@ class PokerGUI:
     )
     self.submit_bet_button.grid(row=1, column=0, padx=15, pady=(0, 10))
 
-  # ------------------- GAME CONTROLS (Continue / End) -------------------
+  # ------------------- GAME CONTROLS -------------------
   def _build_game_controls(self):
     self.continue_frame = ctk.CTkFrame(
         self.main_frame,

@@ -14,13 +14,18 @@ class Card:
     s = self.unicodes.get(self.suit)
     if s is None:
       raise ValueError("suit unicode not found")
-  
     return f'{self.value}{s}'
-    
+  
+  def __eq__(self,other):
+    return self.value == other.value
+  
+  def __lt__(self,other):
+    return self.value < other.value
+  
 class Deck:
   def __init__(self):
     suits = ['spades','hearts','diamonds','clubs']
-    values = range(1,14)
+    values = range(2,15)
     self.cards = [Card(suit=s,value=v) for s,v in product(suits,values)]
   
   def shuffle(self):
@@ -68,7 +73,7 @@ class Player:
   @property
   def is_active(self):
     return not(self.has_folded) and not(self.is_all_in)
-
+    
 class GameState:
   def __init__(self,**kwargs):
     self.pot = kwargs.get('pot',0)
@@ -80,6 +85,7 @@ class GameState:
     self.num_raises = kwargs.get('num_raises',0)
     self.exception = kwargs.get('exception',None)
     self.new_round = kwargs.get('new_round',False)
+    self.winner = kwargs.get('winner',None)
   
   @classmethod
   def from_game_engine(cls,engine):
@@ -91,8 +97,9 @@ class GameState:
     num_raises = engine.num_raises
     exception = engine.exception
     new_round = engine.new_round
+    winner = engine.winner
     
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
                round = round, prev_bet=prev_bet,players = engine.players, num_raises=num_raises,
-               exception = exception,new_round=new_round)
+               exception = exception,new_round=new_round,winner=winner)
 

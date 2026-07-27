@@ -10,8 +10,8 @@ logging.basicConfig(level=logging.INFO)
 
 class PokerEngine:
   '''TODO: Add logging
-  FIX ORDER OF PLAY
-  FIX PREFLOP COLLECTION'''
+  IMPROVE PREFLOP COLLECTION
+  '''
   def __init__(self):
     self.listeners = []
     self.pot = 0
@@ -27,6 +27,7 @@ class PokerEngine:
     self.bot_controller = BotController()
     self.exception = None
     self.new_round = None
+    self.winner = None
   
   def register_listener(self,callback):
     self.listeners.append(callback)
@@ -106,12 +107,9 @@ class PokerEngine:
     return True
 
   
-  def _check_is_game_over(self):
-    '''
-    TODO: ADD OTHER CHECKS FOR GAME END 
-    LIKE - LAST ROUND, EVERYONE IS ALL IN ETC
-    '''
-    pass  
+  def _check_game_over(self):
+    active = [p for p in self.players if not(p.has_folded)]
+    return len(active) == 1
   
   def _advance_round(self):
     '''
@@ -150,7 +148,7 @@ class PokerEngine:
   def handle_action(self,action,amount=0):
     '''
     TODO: Add additional check for is game over
-          Validation of input action
+          Add logic for post game completion
     '''
     self.exception = None
     self.new_round = False
@@ -188,12 +186,25 @@ class PokerEngine:
     self.has_acted.add(curr_player)
     self.current_player_idx = self._get_next_active_player_idx()
     
+    if self._check_game_over():
+      self.winner = self._calculate_winner
+      self._broadcast_state()
+      return
+    
     if self._check_round_over():
       self.new_round = True
       self._advance_round()
     else:
       self._broadcast_state()
     
+  
+  def _calculate_winner(self):
+    not_folded = [p for p in self.players if not(p.has_folded)]
+    if len(not_folded) == 1:
+      return not_folded[0]
+    
+    
+  
   
   def bot_action(self):
     curr_player = self.players[self.current_player_idx]
