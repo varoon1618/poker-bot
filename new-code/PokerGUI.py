@@ -418,7 +418,11 @@ class PokerGUI:
       
     
     self.status_label.configure(text=f"Round: {state.round}")
-    t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id} turn'
+    t = ""
+    if state.exception is None:
+      t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id} turn'
+    else:
+      t = state.exception
     self.move_label.configure(text=t)
 
     if state.current_player.id != self.human_id:

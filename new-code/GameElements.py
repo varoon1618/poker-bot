@@ -54,7 +54,7 @@ class Player:
   
   def __str__(self):
     if self.is_human:
-      return 'Human'
+      return 'You'
     
     return f'Bot{self.id}'
   
@@ -76,8 +76,9 @@ class GameState:
     self.round = kwargs.get('round')
     self.community_cards = kwargs.get('community_cards',[])
     self.prev_bet = kwargs.get('prev_bet',0)
-    self.current_player_action = kwargs.get('current_player_action')
     self.players = kwargs.get('players',[])
+    self.num_raises = kwargs.get('num_raises',0)
+    self.exception = kwargs.get('exception',None)
     
   
   @classmethod
@@ -87,9 +88,10 @@ class GameState:
     community_cards = engine.community_cards
     round = engine.round
     prev_bet = engine.prev_bet
-    current_player_action = engine.current_player_action
+    num_raises = engine.num_raises
+    exception = engine.exception
     
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
-               round = round, prev_bet=prev_bet,current_player_action=current_player_action,
-               players = engine.players)
+               round = round, prev_bet=prev_bet,players = engine.players, num_raises=num_raises,
+               exception = exception)
 
