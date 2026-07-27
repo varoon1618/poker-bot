@@ -399,7 +399,6 @@ class PokerGUI:
 
     for bot_id in range(1, 5):
       bot = state.players[bot_id]
-      #self.bot_widgets[bot_id]["money_label"].configure(text=f"£{bot.chips}")
       self._update_bot_money_label(bot)
       self._update_bot_action_label(bot)
     
@@ -408,11 +407,6 @@ class PokerGUI:
     if state.current_player.id == self.human_id:
       self._enable_action_buttons()
     else:
-      #bot_id = state.current_player.id
-      #action = state.prev_action
-      #amount = state.prev_bet
-      #self._update_bot_action_label(bot_id,action,amount)
-      
       self._highlight_bot_frame(state.current_player.id)
       self._disable_action_buttons()
       
@@ -420,7 +414,7 @@ class PokerGUI:
     self.status_label.configure(text=f"Round: {state.round}")
     t = ""
     if state.exception is None:
-      t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id} turn'
+      t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id}\'s Move'
     else:
       t = state.exception
     self.move_label.configure(text=t)

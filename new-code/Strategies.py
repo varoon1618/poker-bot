@@ -10,4 +10,4 @@ class BotStrategy(ABC):
 
 class CombinatorialStrategy(BotStrategy):
   def decide(self,state):
-    return "RAISE",10
+    return "CALL",10

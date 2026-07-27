@@ -9,7 +9,9 @@ logging.basicConfig(level=logging.INFO)
 
 
 class PokerEngine:
-  '''TODO: Add logging'''
+  '''TODO: Add logging
+  FIX ORDER OF PLAY
+  FIX PREFLOP COLLECTION'''
   def __init__(self):
     self.listeners = []
     self.pot = 0
@@ -45,7 +47,7 @@ class PokerEngine:
     for i in range(1,5):
       bot = Player(id=i,is_human=False)
       self.players.append(bot)
-  
+      
   def initialise_game(self):
     self.add_players()
     
@@ -56,7 +58,7 @@ class PokerEngine:
     
     self.round = "PREFLOP"
     
-    self.current_player_idx = 0
+    self.current_player_idx = 1
     
     self._broadcast_state()
 
@@ -76,9 +78,9 @@ class PokerEngine:
     return None
   
   def _get_first_actor_idx(self):
-    human = self.players[0]
-    if human.is_active:
-      return 0
+    bot1 = self.players[1]
+    if bot1.is_active:
+      return 1
     
     return self._get_next_active_player_idx(start_index=0)
   
@@ -127,6 +129,8 @@ class PokerEngine:
     
     self.has_acted = set()
     self.prev_bet = 0
+    self.num_raises = 0
+    self.exception = None
     self.current_player_idx = self._get_first_actor_idx()
     self._broadcast_state()
   
@@ -196,15 +200,15 @@ class PokerEngine:
     if player.chips < amount:
       raise ValueError("Too few chips")
     
-    if self.num_raises > self.MAX_RAISES_ROUND:
+    if self.num_raises >= self.MAX_RAISES_ROUND:
       raise ValueError(f"cannot raise more than {self.MAX_RAISES_ROUND} times per round")
     
-    self.prev_bet = amount
+    self.prev_bet += amount
     self.pot += amount
     
     player.chips -= amount
     player.latest_action = 'RAISE'
-    player.current_bet = amount
+    player.current_bet = self.prev_bet
     
     if self.num_raises < self.MAX_RAISES_ROUND:
       self.num_raises +=1
@@ -213,8 +217,7 @@ class PokerEngine:
     return
   
   def handle_fold(self,player):
-    
-    if not(player.has_folded):
+    if player.has_folded:
       raise ValueError("already folded")
     
     player.latest_action = 'FOLD'
