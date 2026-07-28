@@ -14,7 +14,9 @@ class Card:
     s = self.unicodes.get(self.suit)
     if s is None:
       raise ValueError("suit unicode not found")
-    return f'{self.value}{s}'
+    
+    v = 'A' if self.value==14 else self.value
+    return f'{v}{s}'
   
   def __eq__(self,other):
     if not(isinstance(other,Card)):
@@ -121,6 +123,7 @@ class GameState:
     self.new_round = kwargs.get('new_round',False)
     self.winners = kwargs.get('winners',None)
     self.game_complete = kwargs.get('game_complete',False)
+    self.winning_rank_name = kwargs.get('winning_rank_name',None)
   
   @classmethod
   def from_game_engine(cls,engine):
@@ -135,9 +138,10 @@ class GameState:
     new_round = engine.new_round
     winners = engine.winners
     game_complete = engine.game_complete
+    winning_rank_name = engine.winning_rank_name
     
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
                round = round, prev_bet=prev_bet,players = players, num_raises=num_raises,
                exception = exception,new_round=new_round,winners=winners,
-               game_complete=game_complete)
+               game_complete=game_complete, winning_rank_name=winning_rank_name)
 

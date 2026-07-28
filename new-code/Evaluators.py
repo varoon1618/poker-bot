@@ -26,11 +26,11 @@ class HandEvaluator:
     rank_types = {
         'ROYAL_FLUSH':9,
         'STRAIGHT_FLUSH':8,
-        'FOUR_KIND':7,
+        'FOUR_OF_A_KIND':7,
         'FULL_HOUSE':6,
         'FLUSH': 5,
         'STRAIGHT': 4,
-        'THREE_KIND': 3,
+        'THREE_OF_A_KIND': 3,
         'TWO_PAIR': 2,
         'ONE_PAIR':1,
         'HIGH_CARD':0
@@ -53,7 +53,7 @@ class HandEvaluator:
                             rank_value=rank_value, kickers=kickers)   
         
         if cls._is_four_kind(hole=hole,community=community):
-            rank_name = 'FOUR_KIND'
+            rank_name = 'FOUR_OF_A_KIND'
             rank_type = cls.rank_types[rank_name]
             rank_value,kickers = cls._get_four_kind_rank_kickers(hole,community)
             return HandRank(rank_name=rank_name,rank_type=rank_type,
@@ -81,7 +81,7 @@ class HandEvaluator:
                             rank_value=rank_value, kickers=kickers)
         
         if cls._is_three_kind(hole=hole,community=community):
-            rank_name = 'THREE_KIND'
+            rank_name = 'THREE_OF_A_KIND'
             rank_type = cls.rank_types[rank_name]
             rank_value,kickers = cls._get_three_kind_rank_kickers(hole,community)
             return HandRank(rank_name=rank_name,rank_type=rank_type,
@@ -275,8 +275,10 @@ class HandEvaluator:
         
         target_suit = next(suit for suit,count in counts.items() if count >=5)
         hand =  sorted([c for c in all_cards if c.suit == target_suit])
-        highest_rank = max(hand)
-        kickers = hand[1:5]
+        highest_card = max(hand)
+        highest_rank = highest_card.value
+        remaining_cards = hand[1:5]
+        kickers = [c.value for c in remaining_cards]
         
         return highest_rank,kickers
     
@@ -290,7 +292,7 @@ class HandEvaluator:
             hand = all_cards[i:i+5]
             if HandEvaluator._is_sequential(hand):
                 high_card = max(hand)
-                highest_rank = max(highest_rank,high_card)
+                highest_rank = max(highest_rank,high_card.value)
         
         return highest_rank,kickers
     

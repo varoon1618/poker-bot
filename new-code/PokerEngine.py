@@ -11,14 +11,15 @@ logging.basicConfig(level=logging.INFO)
 
 class PokerEngine:
   '''TODO: Add logging
-  IMPROVE PREFLOP BET COLLECTION/BUY IN
+  HANDLING CONTINUOUS GAMES WHEN PLAYERS FOLD
   '''
   def __init__(self):
     self.listeners = []
     self.pot = 0
     self.players = []
+    self.add_players()
     self.community_cards = []
-    self.deck = Deck()
+    self.deck = None
     self.current_player_idx = 0
     self.round = None
     self.has_acted = set() #set of players that have already acted this round
@@ -30,6 +31,7 @@ class PokerEngine:
     self.new_round = None
     self.winners = []
     self.game_complete = False
+    self.winning_rank_name = None
   
   def register_listener(self,callback):
     self.listeners.append(callback)
@@ -61,19 +63,36 @@ class PokerEngine:
     self.players.append(bot4)
       
   def initialise_game(self):
-    self.add_players()
-    
+    #reset deck
+    self.deck = Deck()
     self.deck.shuffle()
+    
+    #reset community attrs
+    self.community_cards = []
+    self.pot = 0
+    
+    #reset player attrs
     for p in self.players:
-      hand = self.deck.deal_cards(2)
-      p.update_hand(hand)
-    
-    self.round = "PREFLOP"
-    
+      p.hand = []
+      p.latest_action = None
+      p.current_bet = 0
+      p.has_folded = False
+      p.is_all_in = False
+        
+    #reset game state
+    self.round = "BUY_IN"
+    self.has_acted = set() #set of players that have already acted this round
+    self.num_raises = 0
     self.current_player_idx = 0
-    
-    self._broadcast_state()
+    self.prev_bet = 5
+    self.exception = None
+    self.new_round = None
+    self.winners = []
+    self.game_complete = False
+    self.winning_rank_name = None
 
+    self._broadcast_state()
+  
   def _get_next_active_player_idx(self, start_index=None):
     if start_index is None:
         start_index = self.current_player_idx
@@ -118,7 +137,15 @@ class PokerEngine:
     TODO: Add logic for post river rounds
     '''
     
-    if self.round == 'PREFLOP':
+    if self.round == 'BUY_IN':
+      self.round = 'PREFLOP'
+      for p in self.players:
+        if p.chips < self.prev_bet:
+          continue
+        hand = self.deck.deal_cards(2)
+        p.update_hand(hand)
+      
+    elif self.round == 'PREFLOP':
       self.round = 'FLOP'
       flop = self.deck.deal_cards(3)
       self.community_cards.extend(flop)
@@ -134,20 +161,19 @@ class PokerEngine:
       self.community_cards.extend(river)
     
     elif self.round == 'RIVER':
-      if self._check_game_over():
-        self.winners = self._calculate_winners()
-        self.game_complete = True
-        self._broadcast_state()
-      else:
-        self.round = 'SHOWDOWN'
-        self.winners = self._calculate_winners()
-        self.game_complete = True
-        self._broadcast_state()
+      if not(self._check_game_over()):
+        self.round = 'SHOWDOWN'  
+      
+      self.winners,self.winning_rank_name = self._calculate_winners()
+      self.game_complete = True
+      
+      winnings = self.pot // len(self.winners)
+      for w in self.winners:
+        w.chips += winnings
+      
+      self._broadcast_state()
       return
-    
-    elif self.round == 'SHOWDOWN':
-      pass
-    
+        
     self.has_acted = set()
     self.prev_bet = 5
     self.num_raises = 0
@@ -157,7 +183,7 @@ class PokerEngine:
     self._broadcast_state()
     
     for p in self.players:
-          p.latest_action = None
+      p.latest_action = None
   
   def handle_action(self,action,amount=0):
     '''
@@ -169,7 +195,17 @@ class PokerEngine:
     
     curr_player = self.players[self.current_player_idx]
     
-    if action == 'CALL':
+    if action == 'CALL' and self.round == 'BUY_IN':
+      try:
+        self.handle_buy_in(curr_player)
+        logger.info(f'{curr_player} bought in successfully')
+      except ValueError as e:
+        logger.info(f'Exception by {curr_player}: {e}')
+        self.exception = e
+        self._broadcast_state()
+        return
+      
+    elif action == 'CALL':
       try:
         self.handle_call(curr_player)
         logger.info(f'{curr_player} called successfully')
@@ -201,7 +237,7 @@ class PokerEngine:
     self.current_player_idx = self._get_next_active_player_idx()
     
     if self._check_game_over():
-      self.winners = self._calculate_winners()
+      self.winners,self.winning_rank_name = self._calculate_winners()
       self.game_complete = True
       self._broadcast_state()
       return
@@ -215,14 +251,14 @@ class PokerEngine:
   
   def _calculate_winners(self):
     winners = []
+    highest_rank = None
     not_folded = [p for p in self.players if not(p.has_folded)]
     if len(not_folded) == 1:
       winners.append(not_folded[0])
-      return winners
+      return winners,None
     
-    highest_rank = None
+    logger.info(f'Community cards: {[str(c) for c in self.community_cards]}')
     for p in not_folded:
-      logger.info(f'Community cards: {[str(c) for c in self.community_cards]}')
       hand_rank = HandEvaluator.rank_cards(hole=p.hand,community=self.community_cards)
       logger.info(f'{p}\'s hole: {[str(c) for c in p.hand]}, handrank: {hand_rank.rank_name}')
       if highest_rank is None or hand_rank > highest_rank:
@@ -235,23 +271,32 @@ class PokerEngine:
     
     logger.info(f'Winner is :{winners}, with rank: {highest_rank.rank_name}')
     
-    return winners
+    return winners,highest_rank.rank_name
   
   def bot_action(self):
     curr_player = self.players[self.current_player_idx]
     if curr_player.is_human:
       raise RuntimeError("Current Player human, bot method called")
     
-    
-  def handle_call(self,player):
-      if player.chips < self.prev_bet:
-        raise ValueError("Too few chips")
+  def handle_buy_in(self,player):
+    if player.chips < self.prev_bet:
+        raise ValueError("Cannot Buy in: Too few chips")
       
-      player.chips -= self.prev_bet
-      self.pot += self.prev_bet
-      player.latest_action = 'CALL'
-      player.current_bet = self.prev_bet
-      return
+    player.chips -= self.prev_bet
+    self.pot += self.prev_bet
+    player.latest_action = 'BUY_IN'
+    player.current_bet = self.prev_bet
+    return
+  
+  def handle_call(self,player):
+    if player.chips < self.prev_bet:
+      raise ValueError("Too few chips")
+    
+    player.chips -= self.prev_bet
+    self.pot += self.prev_bet
+    player.latest_action = 'CALL'
+    player.current_bet = self.prev_bet
+    return
       
   
   def handle_raise(self,player,amount):

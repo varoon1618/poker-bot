@@ -18,7 +18,6 @@ class PokerGUI:
     self.engine = engine
     self.human_id = 0
     self.bot_controller = BotController()
-    self.human_idx = 2
 
     master.state('zoomed')
     self.main_frame = ctk.CTkFrame(master, fg_color="#2d9c2d")   # kept original green
@@ -58,7 +57,7 @@ class PokerGUI:
     self.move_label = ctk.CTkLabel(
         self.main_frame,
         text="Latest Move: ",
-        font=("Arial", 13),
+        font=("Arial", 14),
         fg_color="#5bb5ec",           # kept your blue
         text_color="white",
         corner_radius=6,
@@ -315,7 +314,7 @@ class PokerGUI:
     self.submit_bet_button.grid(row=1, column=0, padx=15, pady=(0, 10))
 
   # ------------------- GAME CONTROLS -------------------
-  def _build_game_controls(self):
+  def _enable_game_controls(self):
     self.continue_frame = ctk.CTkFrame(
         self.main_frame,
         fg_color="#d4edda",
@@ -332,16 +331,16 @@ class PokerGUI:
         width=160,
         height=36,
         corner_radius=8,
-        fg_color="#28a745",
-        hover_color="#218838",
+        fg_color="#0a8426",
+        hover_color="#0E6A22",
         text_color="white"
     )
     self.continue_button.grid(row=0, column=0, padx=12, pady=8)
 
     self.end_game_button = ctk.CTkButton(
         self.continue_frame,
-        text="End Game",
-        command=self._end_game,
+        text="Restart New Game",
+        command=self._restart_game,
         width=160,
         height=36,
         corner_radius=8,
@@ -350,7 +349,11 @@ class PokerGUI:
         text_color="white"
     )
     self.end_game_button.grid(row=1, column=0, padx=12, pady=(0, 8))
-
+  
+  def _disable_game_controls(self):
+    if hasattr(self, 'continue_frame') and self.continue_frame:
+      self.continue_frame.place_forget()
+  
   def _trigger_call(self):
     self._process_action("CALL")
 
@@ -406,7 +409,7 @@ class PokerGUI:
   def update_display(self, state):
     self.pot_label.configure(text=f"Pot: £{state.pot}")
     bet_text = ""
-    if state.round == 'PREFLOP':
+    if state.round == 'BUY_IN':
       bet_text = f'Buy in Price: '
     else:
       bet_text = f'Current Bet: '
@@ -415,7 +418,7 @@ class PokerGUI:
     
     self.community_cards_label.configure(text=self._format_cards(state.community_cards))
     
-    human_player = state.players[self.human_idx]
+    human_player = next(p for p in state.players if p.id == self.human_id)
     self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")
     self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
     
@@ -426,16 +429,17 @@ class PokerGUI:
       if player.id == self.human_id:
         continue
       
+      self._clear_bot_hand_label(player)
       self._update_bot_money_label(player)
       self._update_bot_action_label(player)
     
     self._un_highlight_all_bots()
     
-    if state.round == 'PREFLOP':
+    if state.round == 'BUY_IN':
       self._build_buy_in_button()
     
     if state.current_player.id == self.human_id:
-      if state.round == 'PREFLOP':
+      if state.round == 'BUY_IN':
         self._enable_buy_in_button()
       else:
         self._enable_action_buttons()
@@ -443,15 +447,19 @@ class PokerGUI:
       if not(state.game_complete):
         self._highlight_bot_frame(state.current_player.id)
         
-        if state.round != 'PREFLOP':
+        if state.round != 'BUY_IN':
           self._disable_action_buttons()
         else:
           self.call_button.configure(state="disabled")
     
     self.status_label.configure(text=f"Round: {state.round}")
+    
+    if state.round == 'SHOWDOWN':
+      self._show_active_player_hands(state.players)
+    
     t = ""
     if state.game_complete:
-      t = f"Winner is: {state.winners}"
+      t = self._format_winning_text(state.winners,state.winning_rank_name)
     elif not(state.game_complete) and state.exception is None :
       t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id}\'s Move'
     else:
@@ -461,19 +469,37 @@ class PokerGUI:
 
     if state.current_player.id != self.human_id:
       if not(state.game_complete):
-        self.master.after(1500, self._trigger_bot_move, state)   
-  
-  
+        self.master.after(500, self._trigger_bot_move, state)
+    
+    if state.game_complete:
+      self._enable_game_controls()
+      
   def _clear_bot_action_label(self,bot):    
     self.bot_widgets[bot.id]['action_label'].configure(text="Action: ") 
+  
+  def _clear_bot_hand_label(self,bot):   
+    self.bot_widgets[bot.id]['hand_label'].configure(text="Hand: ?") 
+  
+  def _format_winning_text(self,winners,rank_name):
+    names = [str(p) for p in winners]
+    message = " and ".join(names) + " won"
     
+    if rank_name:
+      rname = rank_name.lower().replace('_',' ')
+      message += f" by {str(rname)}"
+    
+    return message
+  
   def _update_bot_money_label(self,bot):
     self.bot_widgets[bot.id]["money_label"].configure(text=f"£{bot.chips}")
     
   def _update_bot_action_label(self,bot):
     s = "Action: "
-    if bot.latest_action == "CALL":
-       s = f'Action: Called £{bot.current_bet}'
+    if bot.latest_action == 'BUY_IN':
+      s = f'Action: Bought in'
+    
+    elif bot.latest_action == "CALL":
+      s = f'Action: Called £{bot.current_bet}'
         
     elif bot.latest_action == 'FOLD':
       s = f'Action: Folded'
@@ -483,12 +509,28 @@ class PokerGUI:
     
     self.bot_widgets[bot.id]['action_label'].configure(text=s) 
     
-    
+  def _show_active_player_hands(self,players):
+    for p in players:
+      if p.id == self.human_id or p.has_folded:
+        continue
+      
+      text = f'Hand: {self._format_cards(p.hand)}'
+      self.bot_widgets[p.id]['hand_label'].configure(text=text)
+
   def _continue_playing(self):
+    self.engine.initialise_game()
+    self._disable_game_controls()
     pass
 
   def _end_game(self):
+    self._disable_game_controls()
     pass
+  
+  def _restart_game(self):
+    self._disable_game_controls()
+    self.engine = PokerEngine()
+    self.engine.register_listener(self.update_display)
+    self.engine.initialise_game()
 
   def _trigger_bot_move(self, state):
     action, amount = self.bot_controller.make_decision(state)
