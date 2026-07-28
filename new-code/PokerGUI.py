@@ -18,6 +18,7 @@ class PokerGUI:
     self.engine = engine
     self.human_id = 0
     self.bot_controller = BotController()
+    self.human_idx = 2
 
     master.state('zoomed')
     self.main_frame = ctk.CTkFrame(master, fg_color="#2d9c2d")   # kept original green
@@ -74,8 +75,8 @@ class PokerGUI:
         corner_radius=12,
         border_width=2,
         border_color="#28a745",
-        width = 275,
-        height = 150
+        width = 320,
+        height = 170
     )
     self.community_frame.place(relx=0.5, rely=0.35, anchor="center")
     self.community_frame.grid_propagate(False)
@@ -107,12 +108,14 @@ class PokerGUI:
     )
     self.community_cards_label.grid(row=1, column=1, sticky="w", padx=5, pady=2)
 
-    ctk.CTkLabel(
+    self.bet_text_label = ctk.CTkLabel(
         self.community_frame,
         text="Current Bet:",
         font=("Arial", 16, "bold"),
         text_color="#155724"
-    ).grid(row=2, column=0, sticky="w", padx=5, pady=2)
+    )
+    
+    self.bet_text_label.grid(row=2, column=0, sticky="w", padx=5, pady=2)
 
     self.current_bet_label = ctk.CTkLabel(
         self.community_frame,
@@ -382,17 +385,37 @@ class PokerGUI:
     self.raise_entry.focus_set()
 
   def _enable_action_buttons(self):
+    self.call_button.configure(text="Call", width=90,fg_color="#17a2b8",hover_color="#138496",)
+    self.call_button.grid(row=0, column=1, padx=10, pady=8, columnspan=1)
+    self.fold_button.grid() 
+    self.raise_button.grid()     
     self.fold_button.configure(state="normal")
     self.call_button.configure(state="normal")
     self.raise_button.configure(state="normal")
+  
+  def _build_buy_in_button(self):
+    self.call_button.configure(text="Buy In", width=200, fg_color="#6f42c1", hover_color="#5a32a3")
+    self.call_button.grid(row=0, column=0, padx=10, pady=8, columnspan=3)
+    self.fold_button.grid_remove()
+    self.raise_button.grid_remove()
 
+    
+  def _enable_buy_in_button(self):
+    self.call_button.configure(state="normal")
+    
   def update_display(self, state):
     self.pot_label.configure(text=f"Pot: £{state.pot}")
-    self.current_bet_label.configure(text=str(state.prev_bet))
+    bet_text = ""
+    if state.round == 'PREFLOP':
+      bet_text = f'Buy in Price: '
+    else:
+      bet_text = f'Current Bet: '
+    self.bet_text_label.configure(text = bet_text)
+    self.current_bet_label.configure(text = f'£{state.prev_bet}')
     
     self.community_cards_label.configure(text=self._format_cards(state.community_cards))
     
-    human_player = state.players[0]
+    human_player = state.players[self.human_idx]
     self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")
     self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
     
@@ -408,16 +431,22 @@ class PokerGUI:
     
     self._un_highlight_all_bots()
     
+    if state.round == 'PREFLOP':
+      self._build_buy_in_button()
+    
     if state.current_player.id == self.human_id:
       if state.round == 'PREFLOP':
-        self.call_button.configure(state="normal")
+        self._enable_buy_in_button()
       else:
         self._enable_action_buttons()
     else:
       if not(state.game_complete):
         self._highlight_bot_frame(state.current_player.id)
-        self._disable_action_buttons()
-      
+        
+        if state.round != 'PREFLOP':
+          self._disable_action_buttons()
+        else:
+          self.call_button.configure(state="disabled")
     
     self.status_label.configure(text=f"Round: {state.round}")
     t = ""
@@ -432,7 +461,7 @@ class PokerGUI:
 
     if state.current_player.id != self.human_id:
       if not(state.game_complete):
-        self.master.after(500, self._trigger_bot_move, state)   
+        self.master.after(1500, self._trigger_bot_move, state)   
   
   
   def _clear_bot_action_label(self,bot):    
