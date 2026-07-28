@@ -17,16 +17,21 @@ class Card:
     return f'{self.value}{s}'
   
   def __eq__(self,other):
+    if not(isinstance(other,Card)):
+      return False
+    
     return self.value == other.value
   
   def __lt__(self,other):
+    if not(isinstance(other,Card)):
+      raise ValueError(f"cannot compare card to {type(other)}")
     return self.value < other.value
   
 class Deck:
   def __init__(self):
-    suits = ['spades','hearts','diamonds','clubs']
-    values = range(2,15)
-    self.cards = [Card(suit=s,value=v) for s,v in product(suits,values)]
+    self.suits = ['spades','hearts','diamonds','clubs']
+    self.values = range(2,15)
+    self.cards = [Card(suit=s,value=v) for s,v in product(self.suits,self.values)]
   
   def shuffle(self):
     random.shuffle(self.cards)
@@ -41,6 +46,35 @@ class Deck:
     out = []
     for _ in range(n):
       out.append(self.draw())
+    return out
+  
+  def _generate_royal_flush(self):
+    out = []
+    values = [14,13,12,11,10]
+    suit = random.choice(self.suits)
+    
+    for v in values:
+      out.append(Card(suit=suit,value=v))
+    return out
+  
+  def _generate_straight_flush(self):
+    out = []
+    low = random.randint(2,9)
+    values = [low+i for i in range(5)]
+    suit = random.choice(self.suits)
+    for v in values:
+      out.append(Card(suit=suit,value=v))
+    
+    return out 
+    
+  def _generate_four_kind_hand(self):
+    out = []
+    v = random.randint(2,14)
+    for i  in range(4):
+      suit = self.suits[i]
+      out.append(Card(suit=suit,value=v))
+    
+    out.append(Card(suit=suit,value=v+1))
     return out
     
 class Player:
