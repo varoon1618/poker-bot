@@ -119,11 +119,13 @@ class GameState:
     self.num_raises = kwargs.get('num_raises',0)
     self.exception = kwargs.get('exception',None)
     self.new_round = kwargs.get('new_round',False)
-    self.winner = kwargs.get('winner',None)
+    self.winners = kwargs.get('winners',None)
+    self.game_complete = kwargs.get('game_complete',False)
   
   @classmethod
   def from_game_engine(cls,engine):
     current_player = engine.players[engine.current_player_idx]
+    players = engine.players
     pot = engine.pot
     community_cards = engine.community_cards
     round = engine.round
@@ -131,9 +133,11 @@ class GameState:
     num_raises = engine.num_raises
     exception = engine.exception
     new_round = engine.new_round
-    winner = engine.winner
+    winners = engine.winners
+    game_complete = engine.game_complete
     
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
-               round = round, prev_bet=prev_bet,players = engine.players, num_raises=num_raises,
-               exception = exception,new_round=new_round,winner=winner)
+               round = round, prev_bet=prev_bet,players = players, num_raises=num_raises,
+               exception = exception,new_round=new_round,winners=winners,
+               game_complete=game_complete)
 

@@ -19,6 +19,9 @@ class HandRank:
                 self.kickers == other.kickers)
 
 class HandEvaluator: 
+    '''TODO: Change class methods to static methods where
+    appropriate'''
+    
     suits = ['spades','hearts','diamonds','clubs']
     rank_types = {
         'ROYAL_FLUSH':9,
@@ -34,7 +37,7 @@ class HandEvaluator:
     }
     
     @classmethod
-    def _rank_cards(cls,hole,community):
+    def rank_cards(cls,hole,community):
         if cls._is_royal_flush(hole,community):
             rank_name = 'ROYAL_FLUSH'
             rank_type = cls.rank_types[rank_name]

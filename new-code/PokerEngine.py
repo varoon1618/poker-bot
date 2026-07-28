@@ -3,6 +3,7 @@ import random
 import logging
 from GameElements import Card,Deck,Player,GameState
 from BotController import BotController
+from Evaluators import HandRank,HandEvaluator
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -10,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 
 class PokerEngine:
   '''TODO: Add logging
-  IMPROVE PREFLOP COLLECTION
+  IMPROVE PREFLOP BET COLLECTION/BUY IN
   '''
   def __init__(self):
     self.listeners = []
@@ -27,7 +28,8 @@ class PokerEngine:
     self.bot_controller = BotController()
     self.exception = None
     self.new_round = None
-    self.winner = None
+    self.winners = []
+    self.game_complete = False
   
   def register_listener(self,callback):
     self.listeners.append(callback)
@@ -108,8 +110,8 @@ class PokerEngine:
 
   
   def _check_game_over(self):
-    active = [p for p in self.players if not(p.has_folded)]
-    return len(active) == 1
+    not_folded = [p for p in self.players if not(p.has_folded)]
+    return len(not_folded) == 1
   
   def _advance_round(self):
     '''
@@ -132,6 +134,18 @@ class PokerEngine:
       self.community_cards.extend(river)
     
     elif self.round == 'RIVER':
+      if self._check_game_over():
+        self.winners = self._calculate_winners()
+        self.game_complete = True
+        self._broadcast_state()
+      else:
+        self.round = 'SHOWDOWN'
+        self.winners = self._calculate_winners()
+        self.game_complete = True
+        self._broadcast_state()
+      return
+    
+    elif self.round == 'SHOWDOWN':
       pass
     
     self.has_acted = set()
@@ -187,7 +201,8 @@ class PokerEngine:
     self.current_player_idx = self._get_next_active_player_idx()
     
     if self._check_game_over():
-      self.winner = self._calculate_winner
+      self.winners = self._calculate_winners()
+      self.game_complete = True
       self._broadcast_state()
       return
     
@@ -198,13 +213,29 @@ class PokerEngine:
       self._broadcast_state()
     
   
-  def _calculate_winner(self):
+  def _calculate_winners(self):
+    winners = []
     not_folded = [p for p in self.players if not(p.has_folded)]
     if len(not_folded) == 1:
-      return not_folded[0]
+      winners.append(not_folded[0])
+      return winners
     
+    highest_rank = None
+    for p in not_folded:
+      logger.info(f'Community cards: {[str(c) for c in self.community_cards]}')
+      hand_rank = HandEvaluator.rank_cards(hole=p.hand,community=self.community_cards)
+      logger.info(f'{p}\'s hole: {[str(c) for c in p.hand]}, handrank: {hand_rank.rank_name}')
+      if highest_rank is None or hand_rank > highest_rank:
+        highest_rank = hand_rank
+        winners = [p]
+      
+      elif hand_rank == highest_rank:
+        winners.append(p)
+      
     
-  
+    logger.info(f'Winner is :{winners}, with rank: {highest_rank.rank_name}')
+    
+    return winners
   
   def bot_action(self):
     curr_player = self.players[self.current_player_idx]

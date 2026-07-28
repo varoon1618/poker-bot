@@ -396,7 +396,7 @@ class PokerGUI:
     self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")
     self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
     
-    logger.info(f'round:{state.round}, new_round:{state.new_round}')
+    #logger.info(f'round:{state.round}, new_round:{state.new_round}')
     
     for i in range(5):
       player = state.players[i]
@@ -414,20 +414,25 @@ class PokerGUI:
       else:
         self._enable_action_buttons()
     else:
-      self._highlight_bot_frame(state.current_player.id)
-      self._disable_action_buttons()
+      if not(state.game_complete):
+        self._highlight_bot_frame(state.current_player.id)
+        self._disable_action_buttons()
       
     
     self.status_label.configure(text=f"Round: {state.round}")
     t = ""
-    if state.exception is None:
+    if state.game_complete:
+      t = f"Winner is: {state.winners}"
+    elif not(state.game_complete) and state.exception is None :
       t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id}\'s Move'
     else:
       t = state.exception
+    
     self.move_label.configure(text=t)
 
     if state.current_player.id != self.human_id:
-      self.master.after(2500, self._trigger_bot_move, state)   
+      if not(state.game_complete):
+        self.master.after(500, self._trigger_bot_move, state)   
   
   
   def _clear_bot_action_label(self,bot):    
