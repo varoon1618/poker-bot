@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from GameElements import GameState
 import math
+from collections import Counter
+
 class BotStrategy(ABC):
   @abstractmethod
   def decide(self,state:GameState):
@@ -68,31 +70,130 @@ class ProbabilityEstimator():
     return royal_prob
   
   def estimate_straight_flush_probability(self,hole,community):
-    deck_cards = 52 - (len(hole)+len(community))
+    unknown_cards = 52 - (len(hole)+len(community))
     remaining_draws  = 5 - len(community)
     
     cards = hole+community
-    possible_ways = 0
+    favourable_outcomes = 0
     for suit in self.suits:
       same_suits = sorted([c.value for c in cards if c.suit == suit])
       possible_flush = []
       
       for flush in self.all_straight_flushes:
         missing = flush - set(same_suits)
-        #print(f'suit: {suit}, flush:{flush}, current_cards: {same_suits}, missing: {missing}')
+        if len(missing) == 0:
+          return 1
+        
         if len(missing) <= remaining_draws:
           possible_flush.append(missing)
       
       for missing in possible_flush:
         required = len(missing)
-        remaining_cards = deck_cards - required
-        filler_cards = remaining_draws-required
-        possible_ways += math.comb(remaining_cards,filler_cards)
-        #print(f'missing: {missing}, ways: {possible_ways}, draws_remaining: {remaining_draws}')
+        # num of cards remaining in deck after straight flush 
+        # eg - 50 cards in deck (unknown) + 2 hole (1,2 diamonds), 
+        # 3 cards req (3,4,5) to make flush, after which unused = 50-3 = 47
+        
+        unused_cards = unknown_cards - required
+        
+        # eg: hole (1,2), required = (3,4,5), draws remaining = 5,
+        # filler cards = 5-3 = 2 
+        filler_cards = remaining_draws - required
+        favourable_outcomes += math.comb(unused_cards,filler_cards)
     
-    print(possible_ways)    
-    total_possibilities = math.comb(deck_cards,remaining_draws)
+    print(favourable_outcomes)    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
     
-    return possible_ways/total_possibilities
+    return favourable_outcomes/total_outcomes
   
+  def estimate_four_kind_probability(self,hole,community):
+    unknown_cards = 52 - (len(hole)+len(community))
+    remaining_draws = 5 - len(community)
+    
+    cards = hole+community
+    rank_counts = Counter([c.value for c in cards])
+    
+    favourable_outcomes = 0
+    for rank in range(2,15):
+      count = rank_counts.get(rank,0)
+      required = 4 - count
+      if required == 0:
+        return 1
+      
+      if required > remaining_draws:
+        continue
+      
+      unused_cards = unknown_cards-required
+      filler_cards = remaining_draws - required
+      
+      favourable_outcomes += math.comb(unused_cards,filler_cards)
+    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
+    
+    return favourable_outcomes/total_outcomes
   
+  def estimate_full_house_probability(self,hole,community):
+    unknown_cards = 52 - (len(hole)+len(community))
+    remaining_draws = 5 - len(community)
+    
+    cards = hole+community
+    rank_counts = Counter([c.value for c in cards])
+    
+    favourable_outcomes = 0
+    
+    #iterate over all possible full house combs, ie all triplet and double pairs
+    for triplet in range(2,15):
+      for pair in range(2,15):
+        if pair == triplet:
+          continue
+        
+        count1 = rank_counts.get(pair,0)
+        required_to_form_pair = max(2 - count1,0)
+        
+        count2 = rank_counts.get(triplet,0)
+        required_to_form_triplet = max(3- count2,0)
+        
+        required = required_to_form_pair + required_to_form_triplet
+        
+        if required == 0:
+          return 1
+        
+        if required > remaining_draws:
+          continue
+        
+        unused_cards = unknown_cards - required
+        filler_cards = remaining_draws - required
+        
+        favourable_outcomes += math.comb(unused_cards,filler_cards)
+    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
+    
+    return favourable_outcomes/total_outcomes
+  
+  def estimate_flush_probability(self,hole,community):
+    unknown_cards = 52 - (len(hole)+len(community))
+    remaining_draws = 5 - len(community)
+    cards = hole+community
+    
+    favourable_outcomes = 0
+    for suit in self.suits:
+      same_suit = [c.value for c in cards if c.suit==suit]
+      required = 5 - len(same_suit)
+      
+      if required <=0:
+        return 1
+      
+      if required > remaining_draws:
+        continue
+      
+      remaining_suit_cards = 13 - len(same_suit)
+      suit_combos = math.comb(remaining_suit_cards,required)
+      
+      unused_cards = unknown_cards - required
+      filler_cards = remaining_draws - required
+      
+      favourable_outcomes += suit_combos * math.comb(unused_cards,filler_cards)
+    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
+    
+    return favourable_outcomes/total_outcomes
+      
