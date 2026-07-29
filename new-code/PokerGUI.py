@@ -13,6 +13,9 @@ logging.basicConfig(level=logging.INFO)
 
 
 class PokerGUI:
+  '''TODO: 
+  ADD A FASTFORWARD BUTTON (?) - WHEN PLAYER FOLDS
+  ADD INTERACTIVE BUTTON/SETTINGS TO SET BOT SPEED/DIFFICULTY ?'''
   def __init__(self, master, engine):
     self.master = master
     self.engine = engine
@@ -28,7 +31,6 @@ class PokerGUI:
     self._build_bots()
     self._build_player_area()
     self._build_action_controls()
-    #self._build_game_controls()
 
   def _build_header(self):
     # Title – larger, bold, with subtle shadow effect (via border)

@@ -203,11 +203,17 @@ class HandEvaluator:
     
     @classmethod
     def _is_sequential(cls,cards):
-        vals = sorted([c.value for c in cards],reverse=True)
-        uniq = set(vals)
-        if len(vals) != len(uniq):
+        low_ace = sorted([1 if c.value ==14 else c.value for c in cards])
+        high_ace = sorted([c.value for c in cards])
+        
+        uniq = set(low_ace)
+        if len(low_ace) != len(uniq):
             return False
-        return max(vals)-min(vals)+1 == len(uniq)
+        
+        low_ace_sequence = (max(low_ace) - min(low_ace) +1 == len(uniq))
+        high_ace_sequence = (max(high_ace) - min(high_ace) +1 == len(uniq))
+        
+        return low_ace_sequence or high_ace_sequence
     
     @staticmethod
     def _get_straight_flush_rank_kickers(hole,community):
@@ -336,6 +342,3 @@ class HandEvaluator:
                 
         return highest_rank,kickers
     
-        
-class ProbabilityEsitmator:
-  pass
