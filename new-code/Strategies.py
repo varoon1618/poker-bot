@@ -18,6 +18,7 @@ class ProbabilityEstimator():
   def __init__(self):
     self.suits = ['spades','clubs','heards','diamonds']
     self.all_straight_flushes = [{14,2,3,4,5}] + [set(range(i,i+5)) for i in range(2,10)]
+    self.all_straights = [{14,2,3,4,5}] + [set(range(i,i+5)) for i in range(2,11)]
   
   def estimate_royal_flush_probability(self,hole,community):
     all_cards = hole+community
@@ -188,12 +189,124 @@ class ProbabilityEstimator():
       remaining_suit_cards = 13 - len(same_suit)
       suit_combos = math.comb(remaining_suit_cards,required)
       
-      unused_cards = unknown_cards - required
-      filler_cards = remaining_draws - required
-      
-      favourable_outcomes += suit_combos * math.comb(unused_cards,filler_cards)
+      max_possible = min(remaining_suit_cards,remaining_draws)
+      for k in range(required,max_possible+1):
+        unused_cards = unknown_cards - remaining_suit_cards
+        filler_cards = remaining_draws - k
+        suit_combos = math.comb(remaining_suit_cards,k)
+        favourable_outcomes += suit_combos * math.comb(unused_cards,filler_cards)
     
     total_outcomes = math.comb(unknown_cards,remaining_draws)
     
     return favourable_outcomes/total_outcomes
+  
+  def estimate_straight_probability(self,hole,community):
+    unknown_cards = 52 - (len(hole)+len(community))
+    remaining_draws  = 5 - len(community)
+        
+    cards = hole+community
+    favourable_outcomes = 0
+    
+    possible_straights = []
+    for straight in self.all_straights:
+      missing = straight - set(cards)
+      if len(missing) == 0:
+        return 1
       
+      if len(missing) <= remaining_draws:
+        possible_straights.append(straight)
+    
+    for missing in possible_straights:
+      required = len(missing)
+      
+      unused_cards = unknown_cards-required
+      filler_cards = remaining_draws-required
+      favourable_outcomes += (4**required)*math.comb(unused_cards,filler_cards)
+    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
+    
+    return favourable_outcomes/total_outcomes
+  
+  def estimate_three_kind_probability(self,hole,community):
+    unknown_cards = 52 - (len(hole)+len(community))
+    remaining_draws = 5 - len(community)
+    
+    cards = hole+community
+    rank_counts = Counter([c.value for c in cards])
+    
+    favourable_outcomes = 0
+    for rank in range(2,15):
+      count = rank_counts.get(rank,0)
+      required = 3 - count
+      if required <= 0:
+        return 1
+      
+      if required > remaining_draws:
+        continue
+      
+      unused_cards = unknown_cards-required
+      filler_cards = remaining_draws - required
+      
+      favourable_outcomes += math.comb(4-count,required)*math.comb(unused_cards,filler_cards)
+    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
+    
+    return favourable_outcomes/total_outcomes
+
+  def estimate_two_pair_probability(self,hole,community):
+    unknown_cards = 52 - (len(hole)+len(community))
+    remaining_draws = 5 - len(community)
+    
+    cards = hole+community
+    rank_counts = Counter([c.value for c in cards])
+    
+    favourable_outcomes = 0
+    
+    for pair1 in range(2,15):
+      for pair2 in range(pair1,15):
+        if pair1 == pair2:
+          count = rank_counts.get(pair1)
+          c1 = 2 if count>=2 else count
+          c2 = count - c1
+        else:
+          c1 = rank_counts.get(pair1)
+          c2 = rank_counts.get(pair2)
+        
+        r1 = max(2-c1,0)
+        r2 = max(2-c2,0)
+        required = r1+r2
+        if required <= 0:
+          return 1
+        
+        if required > remaining_draws:
+          continue
+        
+        unused_cards = unknown_cards - required
+        filler_cards = remaining_draws - required
+        favourable_outcomes += math.comb(4-c1,r1)*math.comb(4-c2,r2)*math.comb(unused_cards,filler_cards)
+        
+  def estimate_one_pair_probability(self,hole,community):
+    unknown_cards = 52 - (len(hole)+len(community))
+    remaining_draws = 5 - len(community)
+    
+    cards = hole+community
+    rank_counts = Counter([c.value for c in cards])
+    
+    favourable_outcomes = 0
+    for rank in range(2,15):
+      count = rank_counts.get(rank,0)
+      required = 2 - count
+      if required <= 0:
+        return 1
+      
+      if required > remaining_draws:
+        continue
+      
+      unused_cards = unknown_cards-required
+      filler_cards = remaining_draws - required
+      
+      favourable_outcomes += math.comb(4-count,required)* math.comb(unused_cards,filler_cards)
+    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
+    
+    return favourable_outcomes/total_outcomes
