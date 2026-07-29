@@ -260,6 +260,7 @@ class PokerEngine:
     logger.info(f'Community cards: {[str(c) for c in self.community_cards]}')
     for p in not_folded:
       hand_rank = HandEvaluator.rank_cards(hole=p.hand,community=self.community_cards)
+      p.hand_rank = hand_rank
       logger.info(f'{p}\'s hole: {[str(c) for c in p.hand]}, handrank: {hand_rank.rank_name}')
       if highest_rank is None or hand_rank > highest_rank:
         highest_rank = hand_rank
