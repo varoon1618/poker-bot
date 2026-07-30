@@ -33,8 +33,7 @@ class GameData:
       })
     return rows  
 
-  
-  
+
 class MonteCarlo:
   def __init__(self):
     self.games = []
@@ -92,11 +91,11 @@ class MonteCarlo:
     
     return out
   
-  
 
 if __name__ == "__main__":
     mc = MonteCarlo()
-    df = mc.simulate_many_games(num_games=100000,save_df=False)
+    #df = mc.simulate_many_games(num_games=100000,save_df=False)
+    #df = pd.read_pickle('500k_hands.pkl')
     mc.estimate_hand_probability(df)
     mc.estimate_bayesian_winning_probability(df)
-    df.to_pickle('500k_hands.pkl')
+    #df.to_pickle('500k_hands.pkl')

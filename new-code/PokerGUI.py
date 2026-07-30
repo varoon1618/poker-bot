@@ -15,7 +15,8 @@ logging.basicConfig(level=logging.INFO)
 class PokerGUI:
   '''TODO: 
   ADD A FASTFORWARD BUTTON (?) - WHEN PLAYER FOLDS
-  ADD INTERACTIVE BUTTON/SETTINGS TO SET BOT SPEED/DIFFICULTY ?'''
+  ADD INTERACTIVE BUTTON/SETTINGS TO SET BOT SPEED/DIFFICULTY ?
+  DISABLE BUTTONS WHEN PLAYER IS ALL IN'''
   def __init__(self, master, engine):
     self.master = master
     self.engine = engine

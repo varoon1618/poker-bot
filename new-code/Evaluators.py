@@ -1,4 +1,5 @@
 from collections import Counter
+from GameElements import Card
 class HandRank:
     def __init__(self, rank_name,rank_type, rank_value, kickers):
         self.rank_name = rank_name
@@ -153,13 +154,29 @@ class HandEvaluator:
     @classmethod 
     def _is_full_house(cls,hole,community):
         all_cards = sorted(hole+community,reverse=True)
-        for i in range(len(all_cards)-4):
-            hand = all_cards[i:i+5]
-            counts = Counter([c.value for c in hand])
-            if sorted(counts.values()) == [2,3]:
+        ranks =  [c.value for c in all_cards]
+        rank_counts = Counter(ranks)
+        
+        #iterate over all possible pairs in rank_counts
+        #and check if 3,2 or 2,3 exists
+        for rank1,count1 in rank_counts.items():
+            #check if rank forms 'triplet' part of full house
+            if count1 < 3:
+                continue
+            for rank2,count2 in rank_counts.items():
+                # same rank cannot form a full house, skip
+                if rank1 == rank2:
+                    continue
+                
+                #check if 
+                if count2 < 2:
+                    continue
+            
+                #rank1 has at least count=3, rank2 has at least count=2 i.e full house
                 return True
+        
         return False
-    
+        
     @classmethod
     def _is_flush(cls,hole,community):
         all_cards = hole+community
@@ -170,6 +187,11 @@ class HandEvaluator:
     @classmethod
     def _is_straight(cls,hole,community):
         all_cards = sorted(hole+community,reverse=True)
+        
+        if 14 in [c.value for c in all_cards]:
+            low_ace = Card('diamond',1) #arbitrary suit doesnt matter for straight calculation
+            all_cards.append(low_ace)
+        
         for i in range(0,len(all_cards)-4):
             hand = all_cards[i:i+5]
             if cls._is_sequential(hand):
@@ -203,17 +225,15 @@ class HandEvaluator:
     
     @classmethod
     def _is_sequential(cls,cards):
-        low_ace = sorted([1 if c.value ==14 else c.value for c in cards])
-        high_ace = sorted([c.value for c in cards])
+        ranks = sorted([c.value for c in cards])
         
-        uniq = set(low_ace)
-        if len(low_ace) != len(uniq):
+        uniq = set(ranks)
+        if len(ranks) != len(uniq):
             return False
         
-        low_ace_sequence = (max(low_ace) - min(low_ace) +1 == len(uniq))
-        high_ace_sequence = (max(high_ace) - min(high_ace) +1 == len(uniq))
+        is_sequence = (max(ranks) - min(ranks) +1 == len(uniq))
         
-        return low_ace_sequence or high_ace_sequence
+        return is_sequence
     
     @staticmethod
     def _get_straight_flush_rank_kickers(hole,community):
