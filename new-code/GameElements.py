@@ -126,6 +126,7 @@ class GameState:
     self.winners = kwargs.get('winners',None)
     self.game_complete = kwargs.get('game_complete',False)
     self.winning_rank_name = kwargs.get('winning_rank_name',None)
+    self.max_raises_round = kwargs.get('max_raises_round',2)
   
   @classmethod
   def from_game_engine(cls,engine):
@@ -141,9 +142,11 @@ class GameState:
     winners = engine.winners
     game_complete = engine.game_complete
     winning_rank_name = engine.winning_rank_name
+    max_raises_round = engine.MAX_RAISES_ROUND
     
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
                round = round, prev_bet=prev_bet,players = players, num_raises=num_raises,
                exception = exception,new_round=new_round,winners=winners,
-               game_complete=game_complete, winning_rank_name=winning_rank_name)
+               game_complete=game_complete, winning_rank_name=winning_rank_name,
+               max_raises_round=max_raises_round)
 

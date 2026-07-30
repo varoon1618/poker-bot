@@ -2,6 +2,10 @@ from abc import ABC, abstractmethod
 from GameElements import GameState
 import math
 from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)  
 
 class BotStrategy(ABC):
   @abstractmethod
@@ -13,7 +17,6 @@ class BotStrategy(ABC):
 class CombinatorialStrategy(BotStrategy):  
   def __init__(self):
     self.estimator = ProbabilityEstimator()
-    
     #P(WINNING/ROYAL_FLUSH).. etc
     # precomputed from running sims of 500,000 hands
     self.bayesian_probabilities = {
@@ -56,30 +59,40 @@ class CombinatorialStrategy(BotStrategy):
     }
   
   def decide(self,state):
+    logger.info(f'{str(state.current_player)} Calculating....')
+    hole = state.current_player.hand
+    community = state.community_cards
+    
+    winning_prob = self.calculate_winning_probability(hole,community)
+    
     fold_EV = 0
     
-    call_EV = self.calculate_call_EV(state)
+    call_EV = self.calculate_call_EV(state,winning_prob)
     
-    raise_EV,raise_amt = self.calculate_raise_EV(state)
+    if state.num_raises == state.max_raises_round:
+      logger.info("MAX RAISES REACHED ")
+      raise_EV,raise_amt = -float('inf'),0
+    else:
+      raise_EV,raise_amt = self.calculate_raise_EV(state,winning_prob)
     
     actions =[
-      (fold_EV,"FOLD",0)
+      (fold_EV,"FOLD",0),
       (call_EV,"CALL",state.prev_bet),
       (raise_EV,"RAISE",raise_amt)
     ]
     
+    logger.info(f'Hole: {[str(c) for c in hole]}, Community: {[str(c) for c in community]}')
+    logger.info(f'Win Prob: {winning_prob:.4f}%')
+    logger.info(f'Call EV: {call_EV}')
+    logger.info(f'Raise EV: {raise_EV}, amt: {raise_amt}')
     best_ev, best_action, best_amount = max(actions, key=lambda x: x[0])
     return best_action, best_amount
   
-  def calculate_call_EV(self,state):
+  def calculate_call_EV(self,state,winning_prob):
     bet = state.prev_bet
     pot = state.pot
-    p = state.current_player
-    
-    hole = p.hand
-    community = state.community_cards
-    
-    winning_prob = self.calculate_winning_probability(hole,community)
+        
+    #winning_prob = self.calculate_winning_probability(hole,community)
     
     hand_won = winning_prob*(pot+bet)
     hand_lost = (1-winning_prob) * -bet
@@ -87,28 +100,22 @@ class CombinatorialStrategy(BotStrategy):
     call_EV = hand_won + hand_lost
     return call_EV
   
-  def calculate_raise_EV(self,state):
+  def calculate_raise_EV(self,state,winning_prob):
     bet = state.prev_bet
     pot = state.pot
-    p = state.current_player
     active_players =  len([p for p in state.players if p.is_active])
-
-    hole = p.hand
-    community = state.community_cards
         
-    winning_prob = self.calculate_winning_probability(hole,community)
-    
     oppent_fold_prob = 0.25
     all_opponents_fold = oppent_fold_prob ** active_players
     
-    candidate_raises = [10,30,70,100,150,200]
+    candidate_raises = [b for b in range(5,pot,10)]
     
-    raise_EV = 0 
+    raise_EV = -float('inf') 
     raise_amt = 0   
     for r in candidate_raises:
       new_bet = bet + r
-      hand_won = winning_prob * (pot+bet)
-      hand_lost = (1-winning_prob)*(-bet)
+      hand_won = winning_prob * (pot+new_bet)
+      hand_lost = (1-winning_prob)*(-new_bet)
       curr_EV = all_opponents_fold*(pot+bet) + (1-all_opponents_fold)*(hand_won + hand_lost) 
       
       if curr_EV > raise_EV:
@@ -139,12 +146,16 @@ class CombinatorialStrategy(BotStrategy):
     #P(winning/rank_type) - estimated using monte carlo of 500k hands
     total_winning_prob = 0
     
+    
+   # logger.info(f'Hole: {[str(c) for c in hole]}, Community: {[str(c) for c in community]}')
     for rank_type in self.rank_types:
       estimation_func = self.estimate_call_backs[rank_type]
       estimated_prob = estimation_func(hole=hole,community=community) #P(rank type)
       bayesian = self.bayesian_probabilities[rank_type] #P(winning/rank type)
       total_winning_prob += estimated_prob*bayesian
+      logger.info(f'Probability of {rank_type}: {estimated_prob*100:.4f}%')
     
+    #logger.info(f'Total winning prob: {total_winning_prob*100:.4f}%')
     return total_winning_prob
     
 class ProbabilityEstimator():
@@ -198,7 +209,6 @@ class ProbabilityEstimator():
     remaining_cards = deck_cards-required
     possible_ways = math.comb(remaining_cards,filler_spots)*len(royal_candidate_suits)
     
-    print(f'possible: {possible_ways}, total: {total_combinations}')
     royal_prob =  possible_ways/total_combinations
     
     return royal_prob
@@ -223,10 +233,14 @@ class ProbabilityEstimator():
       
       for missing in possible_flush:
         required = len(missing)
+        
+        if required > remaining_draws:
+          continue
+        
         # num of cards remaining in deck after straight flush 
         # eg - 50 cards in deck (unknown) + 2 hole (1,2 diamonds), 
         # 3 cards req (3,4,5) to make flush, after which unused = 50-3 = 47
-        
+    
         unused_cards = unknown_cards - required
         
         # eg: hole (1,2), required = (3,4,5), draws remaining = 5,
@@ -340,9 +354,10 @@ class ProbabilityEstimator():
     cards = hole+community
     favourable_outcomes = 0
     
+    s = set([c.value for c in cards])
     possible_straights = []
     for straight in self.all_straights:
-      missing = straight - set(cards)
+      missing = straight - s
       if len(missing) == 0:
         return 1
       
@@ -351,6 +366,9 @@ class ProbabilityEstimator():
     
     for missing in possible_straights:
       required = len(missing)
+      
+      if required > remaining_draws:
+        continue
       
       unused_cards = unknown_cards-required
       filler_cards = remaining_draws-required
@@ -398,12 +416,12 @@ class ProbabilityEstimator():
     for pair1 in range(2,15):
       for pair2 in range(pair1,15):
         if pair1 == pair2:
-          count = rank_counts.get(pair1)
+          count = rank_counts.get(pair1,0)
           c1 = 2 if count>=2 else count
           c2 = count - c1
         else:
-          c1 = rank_counts.get(pair1)
-          c2 = rank_counts.get(pair2)
+          c1 = rank_counts.get(pair1,0)
+          c2 = rank_counts.get(pair2,0)
         
         r1 = max(2-c1,0)
         r2 = max(2-c2,0)
@@ -417,6 +435,10 @@ class ProbabilityEstimator():
         unused_cards = unknown_cards - required
         filler_cards = remaining_draws - required
         favourable_outcomes += math.comb(4-c1,r1)*math.comb(4-c2,r2)*math.comb(unused_cards,filler_cards)
+    
+    total_outcomes = math.comb(unknown_cards,remaining_draws)
+    
+    return favourable_outcomes/total_outcomes
         
   def estimate_one_pair_probability(self,hole,community):
     unknown_cards = 52 - (len(hole)+len(community))

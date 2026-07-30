@@ -33,7 +33,6 @@ class GameData:
       })
     return rows  
 
-
 class MonteCarlo:
   def __init__(self):
     self.games = []

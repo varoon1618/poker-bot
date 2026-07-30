@@ -13,6 +13,7 @@ class PokerEngine:
   '''TODO: Add logging
   HANDLING CONTINUOUS GAMES WHEN PLAYERS FOLD
   WHEN A PERSON CALLS, BUT BET > CHIPS HANDLE THAT
+  MAXIMUM AMOUNT TO RAISE
   '''
   def __init__(self):
     self.listeners = []
@@ -167,11 +168,7 @@ class PokerEngine:
       
       self.winners,self.winning_rank_name = self._calculate_winners()
       self.game_complete = True
-      
-      winnings = self.pot // len(self.winners)
-      for w in self.winners:
-        w.chips += winnings
-      
+      self._update_winnings(self.winners)      
       self._broadcast_state()
       return
         
@@ -185,6 +182,12 @@ class PokerEngine:
     
     for p in self.players:
       p.latest_action = None
+  
+  
+  def _update_winnings(self,winners):
+    winnings = self.pot // len(self.winners)
+    for w in winners:
+      w.chips += winnings
   
   def handle_action(self,action,amount=0):
     '''
@@ -229,6 +232,7 @@ class PokerEngine:
     elif action == 'FOLD':
       try:
         self.handle_fold(curr_player)
+        
       except ValueError as e:
         self.exception = e
         self._broadcast_state()
@@ -240,6 +244,7 @@ class PokerEngine:
     if self._check_game_over():
       self.winners,self.winning_rank_name = self._calculate_winners()
       self.game_complete = True
+      self._update_winnings(self.winners)
       self._broadcast_state()
       return
     
@@ -256,6 +261,7 @@ class PokerEngine:
     not_folded = [p for p in self.players if not(p.has_folded)]
     if len(not_folded) == 1:
       winners.append(not_folded[0])
+      logger.info(f'Winner is :{winners}, all others folded')
       return winners,None
     
     logger.info(f'Community cards: {[str(c) for c in self.community_cards]}')
@@ -270,9 +276,7 @@ class PokerEngine:
       elif hand_rank == highest_rank:
         winners.append(p)
       
-    
-    logger.info(f'Winner is :{winners}, with rank: {highest_rank.rank_name}')
-    
+    logger.info(f'Winner is :{winners}, with rank: {highest_rank.rank_name}')  
     return winners,highest_rank.rank_name
   
   def bot_action(self):
@@ -327,6 +331,7 @@ class PokerEngine:
     
     player.latest_action = 'FOLD'
     player.has_folded = True
+    logger.info(f'{str(player)} Folded')
     return
   
       

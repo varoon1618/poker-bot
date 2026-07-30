@@ -16,7 +16,11 @@ class PokerGUI:
   '''TODO: 
   ADD A FASTFORWARD BUTTON (?) - WHEN PLAYER FOLDS
   ADD INTERACTIVE BUTTON/SETTINGS TO SET BOT SPEED/DIFFICULTY ?
-  DISABLE BUTTONS WHEN PLAYER IS ALL IN'''
+  DISABLE BUTTONS WHEN PLAYER IS ALL IN
+  DO NOT ERASE BOT ACTION LABEL WHEN BOT HAS FOLDED
+  HANDLE WINNING WHEN EVERYONE FOLDS
+  ADD MAX RAISE 
+  '''
   def __init__(self, master, engine):
     self.master = master
     self.engine = engine
@@ -475,6 +479,7 @@ class PokerGUI:
         self.master.after(500, self._trigger_bot_move, state)
     
     if state.game_complete:
+      self._disable_action_buttons()
       self._enable_game_controls()
       
   def _clear_bot_action_label(self,bot):    
@@ -536,7 +541,12 @@ class PokerGUI:
     self.engine.initialise_game()
 
   def _trigger_bot_move(self, state):
-    action, amount = self.bot_controller.make_decision(state)
+    if state.round == 'BUY_IN':
+      action = "CALL"
+      amount = 0
+    else:
+      action, amount = self.bot_controller.make_decision(state)
+    
     self._process_action(action, amount)
   
   def _highlight_bot_frame(self, bot_id, thick=True):
