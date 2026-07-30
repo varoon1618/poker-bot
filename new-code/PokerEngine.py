@@ -34,6 +34,9 @@ class PokerEngine:
     self.winners = []
     self.game_complete = False
     self.winning_rank_name = None
+    self.can_continue_game = None
+    self.can_continue_betting = None
+    self.human_id = 0
   
   def register_listener(self,callback):
     self.listeners.append(callback)
@@ -43,7 +46,6 @@ class PokerEngine:
       callback(self.get_game_state())
   
   def get_game_state(self):
-    '''TODO: ADD more attrs to game state'''
     
     current_state = GameState.from_game_engine(self)
     return current_state
@@ -72,14 +74,36 @@ class PokerEngine:
     #reset community attrs
     self.community_cards = []
     self.pot = 0
+    self.can_continue_game = True
+    self.can_continue_betting = True
     
     #reset player attrs
+    non_bust_players = [p for p in self.players if p.chips>5]
+    
+    ids = [p.id for p in non_bust_players]
+    if self.human_id not in ids:
+      self.can_continue_game = False
+      logger.info("Went Bust")
+      self.exception = 'Game Over: You went bust, Please Restart'
+      self._broadcast_state()
+      return
+    
+    if len(ids) == 1:
+      self.can_continue_game = False
+      self.exception = 'No other players remaining, please restart'
+      self._broadcast_state()
+      return
+    
     for p in self.players:
       p.hand = []
       p.latest_action = None
       p.current_bet = 0
       p.has_folded = False
       p.is_all_in = False
+      
+      if p.chips < 5:
+        p.latest_action = 'BUST'
+        p.has_folded = True
         
     #reset game state
     self.round = "BUY_IN"
@@ -130,15 +154,15 @@ class PokerEngine:
     return True
 
   
-  def _check_game_over(self):
+  def _check_all_folded(self):
     not_folded = [p for p in self.players if not(p.has_folded)]
     return len(not_folded) == 1
   
-  def _advance_round(self):
-    '''
-    TODO: Add logic for post river rounds
-    '''
-    
+  def _check_everybody_all_in(self):
+    not_folded = [p for p in self.players if not(p.has_folded)]
+    return all(p.is_all_in for p in not_folded)
+  
+  def _advance_round(self):     
     if self.round == 'BUY_IN':
       self.round = 'PREFLOP'
       for p in self.players:
@@ -163,7 +187,7 @@ class PokerEngine:
       self.community_cards.extend(river)
     
     elif self.round == 'RIVER':
-      if not(self._check_game_over()):
+      if not(self._check_all_folded()):
         self.round = 'SHOWDOWN'  
       
       self.winners,self.winning_rank_name = self._calculate_winners()
@@ -171,17 +195,23 @@ class PokerEngine:
       self._update_winnings(self.winners)      
       self._broadcast_state()
       return
-        
+    
+    # all active players and bots are all in no further interactive actions
+    if self._check_everybody_all_in():
+      self.can_continue_betting = False
+      logger.info("EVERBODY ALL IN: ADVANCE ROUND")
+      self._broadcast_state()
+      return
+
     self.has_acted = set()
     self.prev_bet = 5
     self.num_raises = 0
     self.exception = None
-    self.current_player_idx = self._get_first_actor_idx()
-    
+    self.current_player_idx = self._get_first_actor_idx() 
     self._broadcast_state()
     
     for p in self.players:
-      p.latest_action = None
+      p.latest_action =  None if not(p.has_folded) else 'FOLD'
   
   
   def _update_winnings(self,winners):
@@ -192,14 +222,13 @@ class PokerEngine:
   def handle_action(self,action,amount=0):
     '''
     TODO: Add additional check for is game over
-          Add logic for post game completion
     '''
     self.exception = None
     self.new_round = False
     
     curr_player = self.players[self.current_player_idx]
     
-    if action == 'CALL' and self.round == 'BUY_IN':
+    if self.round == 'BUY_IN':
       try:
         self.handle_buy_in(curr_player)
         logger.info(f'{curr_player} bought in successfully')
@@ -239,12 +268,19 @@ class PokerEngine:
         return
     
     self.has_acted.add(curr_player)
-    self.current_player_idx = self._get_next_active_player_idx()
+    next_idx = self._get_next_active_player_idx()
+    self.current_player_idx = 0 if next_idx is None else next_idx
     
-    if self._check_game_over():
+    if self._check_all_folded():
       self.winners,self.winning_rank_name = self._calculate_winners()
       self.game_complete = True
       self._update_winnings(self.winners)
+      self._broadcast_state()
+      return
+    
+    if self._check_everybody_all_in():
+      logger.info("EVERBODY ALL IN")
+      self.can_continue_betting = False
       self._broadcast_state()
       return
     
@@ -286,7 +322,10 @@ class PokerEngine:
     
   def handle_buy_in(self,player):
     if player.chips < self.prev_bet:
-        raise ValueError("Cannot Buy in: Too few chips")
+      player.latest_action = 'BUST'
+      player.has_folded = True
+      self._broadcast_state()
+      return
       
     player.chips -= self.prev_bet
     self.pot += self.prev_bet
@@ -295,22 +334,33 @@ class PokerEngine:
     return
   
   def handle_call(self,player):
-    if player.chips < self.prev_bet:
-      raise ValueError("Too few chips")
-    
-    player.chips -= self.prev_bet
-    self.pot += self.prev_bet
+    bet = self.prev_bet
+    if player.chips == 0:
+      player.is_all_in = True
+      return
+    if player.chips <= self.prev_bet:
+      player.is_all_in = True
+      bet = player.chips
+      
+    player.chips -= bet
+    self.pot += bet
     player.latest_action = 'CALL'
     player.current_bet = self.prev_bet
     return
       
   
   def handle_raise(self,player,amount):
-    if player.chips < amount:
-      raise ValueError("Too few chips")
+    if not(isinstance(amount,int)) or amount <= 0:
+      raise ValueError("Enter a positive integer")
     
     if self.num_raises >= self.MAX_RAISES_ROUND:
-      raise ValueError(f"cannot raise more than {self.MAX_RAISES_ROUND} times per round")
+      raise ValueError(f"Cannot raise more than {self.MAX_RAISES_ROUND} times per round")
+    
+    if player.chips <amount:
+      raise ValueError("Too few chips")
+    
+    if player.chips == amount:
+      player.is_all_in = True
     
     self.prev_bet += amount
     self.pot += amount

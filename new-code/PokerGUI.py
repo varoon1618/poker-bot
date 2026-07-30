@@ -14,12 +14,7 @@ logging.basicConfig(level=logging.INFO)
 
 class PokerGUI:
   '''TODO: 
-  ADD A FASTFORWARD BUTTON (?) - WHEN PLAYER FOLDS
   ADD INTERACTIVE BUTTON/SETTINGS TO SET BOT SPEED/DIFFICULTY ?
-  DISABLE BUTTONS WHEN PLAYER IS ALL IN
-  DO NOT ERASE BOT ACTION LABEL WHEN BOT HAS FOLDED
-  HANDLE WINNING WHEN EVERYONE FOLDS
-  ADD MAX RAISE 
   '''
   def __init__(self, master, engine):
     self.master = master
@@ -36,6 +31,7 @@ class PokerGUI:
     self._build_bots()
     self._build_player_area()
     self._build_action_controls()
+    self._build_game_controls()
 
   def _build_header(self):
     # Title – larger, bold, with subtle shadow effect (via border)
@@ -321,7 +317,7 @@ class PokerGUI:
     self.submit_bet_button.grid(row=1, column=0, padx=15, pady=(0, 10))
 
   # ------------------- GAME CONTROLS -------------------
-  def _enable_game_controls(self):
+  def _build_game_controls(self):
     self.continue_frame = ctk.CTkFrame(
         self.main_frame,
         fg_color="#d4edda",
@@ -329,7 +325,6 @@ class PokerGUI:
         border_width=2,
         border_color="#28a745"
     )
-    self.continue_frame.place(relx=0.5, rely=0.93, anchor="center")
 
     self.continue_button = ctk.CTkButton(
         self.continue_frame,
@@ -357,10 +352,19 @@ class PokerGUI:
     )
     self.end_game_button.grid(row=1, column=0, padx=12, pady=(0, 8))
   
+  def _enable_game_controls(self):
+    self.continue_frame.place(relx=0.5, rely=0.93, anchor="center")
+    self.continue_button.configure(state="normal")
+    self.end_game_button.configure(state="normal")
+
+  def _enable_only_restart_controls(self):
+    self.continue_frame.place(relx=0.5, rely=0.93, anchor="center")
+    self.continue_button.configure(state="disabled")
+    self.end_game_button.configure(state="normal") 
+    
   def _disable_game_controls(self):
-    if hasattr(self, 'continue_frame') and self.continue_frame:
-      self.continue_frame.place_forget()
-  
+    self.continue_frame.place_forget()
+    
   def _trigger_call(self):
     self._process_action("CALL")
 
@@ -408,7 +412,6 @@ class PokerGUI:
     self.call_button.grid(row=0, column=0, padx=10, pady=8, columnspan=3)
     self.fold_button.grid_remove()
     self.raise_button.grid_remove()
-
     
   def _enable_buy_in_button(self):
     self.call_button.configure(state="normal")
@@ -429,13 +432,11 @@ class PokerGUI:
     self.player_purse_label.configure(text=f"Your Purse: £{human_player.chips}")
     self.player_hand_cards.configure(text=self._format_cards(human_player.hand))
     
-    #logger.info(f'round:{state.round}, new_round:{state.new_round}')
     
     for i in range(5):
       player = state.players[i]
       if player.id == self.human_id:
         continue
-      
       self._clear_bot_hand_label(player)
       self._update_bot_money_label(player)
       self._update_bot_action_label(player)
@@ -450,8 +451,8 @@ class PokerGUI:
         self._enable_buy_in_button()
       else:
         self._enable_action_buttons()
-    else:
-      if not(state.game_complete):
+    if state.current_player.id != self.human_id:
+      if not(state.game_complete) and state.can_continue_betting:
         self._highlight_bot_frame(state.current_player.id)
         
         if state.round != 'BUY_IN':
@@ -467,20 +468,31 @@ class PokerGUI:
     t = ""
     if state.game_complete:
       t = self._format_winning_text(state.winners,state.winning_rank_name)
+    elif not(state.can_continue_betting):
+      t = "Everybody all in"
     elif not(state.game_complete) and state.exception is None :
       t = 'Your Move' if state.current_player.id == 0 else f'Bot {state.current_player.id}\'s Move'
     else:
       t = state.exception
     
     self.move_label.configure(text=t)
-
-    if state.current_player.id != self.human_id:
-      if not(state.game_complete):
-        self.master.after(500, self._trigger_bot_move, state)
     
-    if state.game_complete:
+    if not(state.can_continue_betting) and state.round != 'SHOWDOWN':
+        self.master.after(1000,self.engine._advance_round,)
+    
+    if state.current_player.id != self.human_id:
+      if not(state.game_complete) and state.can_continue_betting:
+        self.master.after(150, self._trigger_bot_move, state)
+             
+    if state.game_complete and state.can_continue_game:
       self._disable_action_buttons()
       self._enable_game_controls()
+    
+    
+    if not(state.can_continue_game):
+      self._disable_action_buttons()
+      self._enable_only_restart_controls()
+      self.move_label.configure(text=state.exception)
       
   def _clear_bot_action_label(self,bot):    
     self.bot_widgets[bot.id]['action_label'].configure(text="Action: ") 
@@ -515,6 +527,8 @@ class PokerGUI:
     elif bot.latest_action == "RAISE":
       s = f'Action: Raised £{bot.current_bet}'
     
+    elif  bot.latest_action == 'BUST':
+      s = f'Action: Went Bust'
     self.bot_widgets[bot.id]['action_label'].configure(text=s) 
     
   def _show_active_player_hands(self,players):
@@ -526,14 +540,11 @@ class PokerGUI:
       self.bot_widgets[p.id]['hand_label'].configure(text=text)
 
   def _continue_playing(self):
-    self.engine.initialise_game()
     self._disable_game_controls()
+    self.engine.initialise_game()
     pass
 
-  def _end_game(self):
-    self._disable_game_controls()
-    pass
-  
+
   def _restart_game(self):
     self._disable_game_controls()
     self.engine = PokerEngine()

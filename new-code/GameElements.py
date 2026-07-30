@@ -85,7 +85,7 @@ class Player:
     self.hand = []
     self.id = id
     self.is_human = is_human
-    self.chips = 1000
+    self.chips = 10 if is_human else 100
     self.current_bet = 0
     self.has_folded = False
     self.is_all_in = False
@@ -127,6 +127,9 @@ class GameState:
     self.game_complete = kwargs.get('game_complete',False)
     self.winning_rank_name = kwargs.get('winning_rank_name',None)
     self.max_raises_round = kwargs.get('max_raises_round',2)
+    self.can_continue_betting = kwargs.get('can_continue_betting',False)
+    self.can_continue_game = kwargs.get('can_continue_game',False)
+
   
   @classmethod
   def from_game_engine(cls,engine):
@@ -143,10 +146,13 @@ class GameState:
     game_complete = engine.game_complete
     winning_rank_name = engine.winning_rank_name
     max_raises_round = engine.MAX_RAISES_ROUND
+    can_continue_betting = engine.can_continue_betting
+    can_continue_game = engine.can_continue_game
     
     return cls(current_player=current_player,pot=pot,community_cards=community_cards,
                round = round, prev_bet=prev_bet,players = players, num_raises=num_raises,
                exception = exception,new_round=new_round,winners=winners,
                game_complete=game_complete, winning_rank_name=winning_rank_name,
-               max_raises_round=max_raises_round)
+               max_raises_round=max_raises_round,can_continue_betting=can_continue_betting,
+               can_continue_game =can_continue_game)
 
