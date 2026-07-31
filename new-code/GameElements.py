@@ -85,7 +85,7 @@ class Player:
     self.hand = []
     self.id = id
     self.is_human = is_human
-    self.chips = 10 if is_human else 100
+    self.chips = 1000
     self.current_bet = 0
     self.has_folded = False
     self.is_all_in = False

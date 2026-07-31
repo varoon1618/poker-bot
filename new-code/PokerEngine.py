@@ -199,7 +199,7 @@ class PokerEngine:
     # all active players and bots are all in no further interactive actions
     if self._check_everybody_all_in():
       self.can_continue_betting = False
-      logger.info("EVERBODY ALL IN: ADVANCE ROUND")
+      #logger.info("EVERBODY ALL IN: ADVANCE ROUND")
       self._broadcast_state()
       return
 
@@ -220,9 +220,7 @@ class PokerEngine:
       w.chips += winnings
   
   def handle_action(self,action,amount=0):
-    '''
-    TODO: Add additional check for is game over
-    '''
+    
     self.exception = None
     self.new_round = False
     
@@ -252,7 +250,6 @@ class PokerEngine:
       try:
         self.handle_raise(curr_player,amount)
         logger.info(f'{curr_player} raised {amount}')
-      
       except ValueError as e:
         self.exception = e
         self._broadcast_state()
@@ -338,6 +335,7 @@ class PokerEngine:
     if player.chips == 0:
       player.is_all_in = True
       return
+    
     if player.chips <= self.prev_bet:
       player.is_all_in = True
       bet = player.chips
@@ -356,10 +354,10 @@ class PokerEngine:
     if self.num_raises >= self.MAX_RAISES_ROUND:
       raise ValueError(f"Cannot raise more than {self.MAX_RAISES_ROUND} times per round")
     
-    if player.chips <amount:
+    if player.chips < self.prev_bet + amount:
       raise ValueError("Too few chips")
     
-    if player.chips == amount:
+    if player.chips == self.prev_bet+amount:
       player.is_all_in = True
     
     self.prev_bet += amount

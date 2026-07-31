@@ -63,6 +63,7 @@ class CombinatorialStrategy(BotStrategy):
     hole = state.current_player.hand
     community = state.community_cards
     
+    player_chips = state.current_player.chips
     winning_prob = self.calculate_winning_probability(hole,community)
     
     fold_EV = 0
@@ -73,7 +74,7 @@ class CombinatorialStrategy(BotStrategy):
       logger.info("MAX RAISES REACHED ")
       raise_EV,raise_amt = -float('inf'),0
     else:
-      raise_EV,raise_amt = self.calculate_raise_EV(state,winning_prob)
+      raise_EV,raise_amt = self.calculate_raise_EV(state,winning_prob,player_chips)
     
     actions =[
       (fold_EV,"FOLD",0),
@@ -100,13 +101,13 @@ class CombinatorialStrategy(BotStrategy):
     call_EV = hand_won + hand_lost
     return call_EV
   
-  def calculate_raise_EV(self,state,winning_prob):
+  def calculate_raise_EV(self,state,winning_prob,player_chips):
     bet = state.prev_bet
     pot = state.pot
     active_players =  len([p for p in state.players if p.is_active])
         
     oppent_fold_prob = 0.25
-    all_opponents_fold = oppent_fold_prob ** active_players
+    all_opponents_fold = oppent_fold_prob ** (active_players-1)
     
     candidate_raises = [b for b in range(5,pot,10)]
     
@@ -114,6 +115,8 @@ class CombinatorialStrategy(BotStrategy):
     raise_amt = 0   
     for r in candidate_raises:
       new_bet = bet + r
+      if new_bet > player_chips:
+        break
       hand_won = winning_prob * (pot+new_bet)
       hand_lost = (1-winning_prob)*(-new_bet)
       curr_EV = all_opponents_fold*(pot+bet) + (1-all_opponents_fold)*(hand_won + hand_lost) 
