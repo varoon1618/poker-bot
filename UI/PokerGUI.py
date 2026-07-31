@@ -1,9 +1,9 @@
 import customtkinter as ctk
 from tkinter import messagebox
 import tkinter as tk
-from PokerEngine import PokerEngine
+from GameEngine import PokerEngine
 import logging
-from BotController import BotController
+from Bots import BotController
 
 ctk.set_appearance_mode("Light")          # Light mode for crispness
 ctk.set_default_color_theme("green")      # Built‑in green theme
@@ -482,7 +482,7 @@ class PokerGUI:
     
     if state.current_player.id != self.human_id:
       if not(state.game_complete) and state.can_continue_betting:
-        self.master.after(150, self._trigger_bot_move, state)
+        self.master.after(1500, self._trigger_bot_move, state)
              
     if state.game_complete and state.can_continue_game:
       self._disable_action_buttons()
@@ -579,10 +579,3 @@ class PokerGUI:
                 border_color=default_border_color,
                 border_width=1
             )
-if __name__ == "__main__":
-    root = tk.Tk()
-    poker_engine = PokerEngine()
-    gui = PokerGUI(root, engine=poker_engine)
-    poker_engine.register_listener(gui.update_display)
-    poker_engine.initialise_game()
-    root.mainloop()

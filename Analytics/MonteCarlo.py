@@ -1,6 +1,6 @@
-from PokerEngine import PokerEngine
+from GameEngine import PokerEngine
 import uuid
-from BotController import BotController
+from Bots import BotController
 import pandas as pd
 import numpy as np
 
@@ -130,16 +130,16 @@ class MonteCarlo:
   
   
 if __name__ == "__main__":
-    mc = MonteCarlo()
-    df = mc.simulate_many_games(num_games=10000,save_df=False)
-    #df = pd.read_pickle('500k_hands.pkl')
-    df.to_pickle('500k_hands_with_player_data.pkl')
-    #mc.estimate_hand_probability(df)
-    #mc.estimate_bayesian_winning_probability(df)
-    
-    pct_change = mc.calculate_player_returns(df)
-    
-    print(f'mean return: {np.mean(pct_change)}%, std: {np.std(pct_change)}')
-    
-    #plt.plot(pct_change)
-    #df.to_pickle('500k_hands.pkl')
+  mc = MonteCarlo()
+  df = mc.simulate_many_games(num_games=10000,save_df=False)
+  #df = pd.read_pickle('500k_hands.pkl')
+  df.to_pickle('50k_hands_with_player_data.pkl')
+  #mc.estimate_hand_probability(df)
+  #mc.estimate_bayesian_winning_probability(df)
+  
+  pct_change = mc.calculate_player_returns(df)
+  
+  print(f'mean return: {np.mean(pct_change)}%, std: {np.std(pct_change)}')
+  
+  #plt.plot(pct_change)
+  #df.to_pickle('500k_hands.pkl')

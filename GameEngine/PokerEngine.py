@@ -2,8 +2,10 @@ from itertools import product
 import random
 import logging
 from GameElements import Card,Deck,Player,GameState
-from BotController import BotController
-from Evaluators import HandRank,HandEvaluator
+
+from Bots import BotController
+from .HandRank import HandRank
+from .HandEvaluator import HandEvaluator
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

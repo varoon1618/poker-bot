@@ -1,4 +1,4 @@
-from Strategies import CombinatorialStrategy
+from .Strategies import CombinatorialStrategy
 
 class BotController:
   def __init__(self,strategy=None):
