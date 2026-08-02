@@ -4,6 +4,7 @@ import math
 from collections import Counter
 from .ProbabilityEstimator import ProbabilityEstimator
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)  
@@ -159,4 +160,34 @@ class CombinatorialStrategy(BotStrategy):
     
     #logger.info(f'Total winning prob: {total_winning_prob*100:.4f}%')
     return total_winning_prob
-    
+
+class RandomStrategy(BotStrategy):
+  def decide(self, state):
+    player = state.current_player
+    chips = player.chips
+    current_bet = state.prev_bet
+
+    # Amount needed to call (cannot exceed chips)
+    call_amount = min(current_bet, chips)
+
+    # Random roll to choose action
+    roll = random.uniform(0, 1)
+
+    CALL_THRESHOLD = 0.50      # 50% chance to call
+    RAISE_THRESHOLD = 0.75     # another 25% chance to raise
+
+    if roll <= CALL_THRESHOLD or current_bet > chips:
+      return 'CALL', call_amount
+
+    # 2) Raise
+    if roll <= RAISE_THRESHOLD and state.num_raises < state.max_raises_round:
+      raw_raise = random.randint(5, 50)
+      max_additional = chips - current_bet
+      raise_amt = min(raw_raise, max_additional)
+
+      if raise_amt > 0:
+          return 'RAISE', raise_amt
+      else:
+          return 'CALL', call_amount
+
+    return 'FOLD', 0

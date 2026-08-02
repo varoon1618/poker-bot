@@ -9,6 +9,7 @@ class Player:
     self.is_all_in = False
     self.latest_action = None
     self.hand_rank = None
+    self.strategy = None
   
   def __repr__(self):
     return f'Player(id={self.id},chips={self.chips})'
