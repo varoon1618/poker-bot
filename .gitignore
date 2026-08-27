@@ -1,4 +1,5 @@
 __pycache__/
 Testing/
 TestEvaluator.py
+venv/
 *.pkl
