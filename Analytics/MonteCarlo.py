@@ -1,9 +1,13 @@
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from GameEngine import PokerEngine
-import uuid
 from Bots import BotController
 import pandas as pd
 import numpy as np
-
+import uuid
 import matplotlib.pyplot as plt
 
 class GameData:
@@ -34,7 +38,8 @@ class GameData:
           'player_id': p.id,
           'hand_rank': rank,
           'is_winner': p.id in winner_ids,
-          'player_chips': p.chips
+          'player_chips': p.chips,
+          'player_strategy':p.strategy
       })
     return rows  
 
@@ -87,7 +92,11 @@ class MonteCarlo:
   
   def estimate_hand_probability(self,df):
     empirical_probs = df['hand_rank'].value_counts(normalize=True)
-    print(empirical_probs)
+    df_probs = empirical_probs.reset_index()
+    df_probs.columns = ['Hand Rank', 'Probability']
+    df_probs['Probability'] = df_probs['Probability'].apply(lambda x: f"{x:.4%}")
+    print(df_probs.to_string(index=False))
+
   
   def estimate_bayesian_winning_probability(self,df):
     ranks = df['hand_rank'].unique()
@@ -102,7 +111,7 @@ class MonteCarlo:
       out[r_type] = prob_win_given_r
     
     for k,v in out.items():
-      print(f'P(WINNING/{k}) = {v}')  
+      print(f'P(WINNING/{k}) = {v:.4%}')  
     
     return out
   
@@ -124,22 +133,48 @@ class MonteCarlo:
     return p_win_probs  
   
   def calculate_player_returns(self,df,player_id=0,start_chips=1000):
-    player_df = df[df['player_id'] == player_id].sort_values('game_id')
-    pct_change = (player_df['player_chips'] - start_chips) / start_chips * 100
+    player_df = df[df['player_id'] == player_id]
+    pct_change = (df['player_chips'] - start_chips) / start_chips * 100
     return pct_change
   
+ 
+def plot_cum_profit(df,player_id=0):
+  df['returns'] = df['player_chips'] - 1000
+  player_df = df[df['player_id'] == player_id]
+  cumulative = player_df['returns'].cumsum()
+  plt.figure(figsize=(12, 6))
+  plt.plot(cumulative,linewidth=2, color='green')
+  plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)  # Baseline
+  plt.title("Combinatorial Strategy Cumulative Profit")
+  plt.xlabel("Hand Number")
+  plt.ylabel("Cumulative Profit (£)")
+  plt.grid(True, alpha=0.3)
+  plt.show()
+
+def plot_pct_returns(df,player_id=0):
+  player_df = df[df['player_id'] == player_id]
+  returns_pct = (player_df['player_chips'] - 1000) / 1000 * 100
+  plt.figure(figsize=(12, 4))
+  plt.plot(returns_pct, linewidth=1, color='blue', markersize=3)
+  plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+  plt.title("% Returns Per Hand")
+  plt.xlabel("Hand Number")
+  plt.ylabel("Returns (%)")
+  plt.grid(True, alpha=0.3)
+  plt.show()
+
   
 if __name__ == "__main__":
   mc = MonteCarlo()
-  df = mc.simulate_many_games(num_games=10000,save_df=False)
-  #df = pd.read_pickle('500k_hands.pkl')
-  df.to_pickle('50k_hands_with_player_data.pkl')
-  #mc.estimate_hand_probability(df)
-  #mc.estimate_bayesian_winning_probability(df)
+  df = mc.simulate_many_games(num_games=200,save_df=True,df_name='200k_hands.pkl')
   
-  pct_change = mc.calculate_player_returns(df)
+  #df = pd.read_pickle('50k_hands.pkl')
   
-  print(f'mean return: {np.mean(pct_change)}%, std: {np.std(pct_change)}')
+  mc.estimate_hand_probability(df)
+  print()
+  mc.estimate_bayesian_winning_probability(df)
+    
+  id = 2
+  plot_cum_profit(df,player_id=id)
+  plot_pct_returns(df,player_id=id)
   
-  #plt.plot(pct_change)
-  #df.to_pickle('500k_hands.pkl')

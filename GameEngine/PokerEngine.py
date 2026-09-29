@@ -13,9 +13,6 @@ logging.basicConfig(level=logging.INFO)
 
 class PokerEngine:
   '''TODO: Add logging
-  HANDLING CONTINUOUS GAMES WHEN PLAYERS FOLD
-  WHEN A PERSON CALLS, BUT BET > CHIPS HANDLE THAT
-  MAXIMUM AMOUNT TO RAISE
   '''
   def __init__(self):
     self.listeners = []

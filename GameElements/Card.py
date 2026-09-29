@@ -26,3 +26,4 @@ class Card:
     if not(isinstance(other,Card)):
       raise ValueError(f"cannot compare card to {type(other)}")
     return self.value < other.value
+

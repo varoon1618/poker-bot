@@ -85,7 +85,7 @@ class CombinatorialStrategy(BotStrategy):
     ]
     
     logger.info(f'Hole: {[str(c) for c in hole]}, Community: {[str(c) for c in community]}')
-    logger.info(f'Win Prob: {winning_prob:.4f}%')
+    logger.info(f'Win Prob: {winning_prob*100:.4f}%')
     logger.info(f'Call EV: {call_EV}')
     logger.info(f'Raise EV: {raise_EV}, amt: {raise_amt}')
     best_ev, best_action, best_amount = max(actions, key=lambda x: x[0])

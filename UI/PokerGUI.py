@@ -21,7 +21,7 @@ class PokerGUI:
     self.engine = engine
     self.human_id = 0
     self.bot_controller = BotController()
-
+    self.BOT_WAITING_TIME_MILLIS = 1000
     master.state('zoomed')
     self.main_frame = ctk.CTkFrame(master, fg_color="#2d9c2d")   # kept original green
     self.main_frame.pack(fill="both", expand=True)
@@ -478,7 +478,7 @@ class PokerGUI:
     self.move_label.configure(text=t)
     
     if not(state.can_continue_betting) and state.round != 'SHOWDOWN':
-        self.master.after(1000,self.engine._advance_round,)
+        self.master.after(self.BOT_WAITING_TIME_MILLIS,self.engine._advance_round,)
     
     if state.current_player.id != self.human_id:
       if not(state.game_complete) and state.can_continue_betting:
@@ -488,11 +488,11 @@ class PokerGUI:
       self._disable_action_buttons()
       self._enable_game_controls()
     
-    
     if not(state.can_continue_game):
       self._disable_action_buttons()
       self._enable_only_restart_controls()
       self.move_label.configure(text=state.exception)
+    
       
   def _clear_bot_action_label(self,bot):    
     self.bot_widgets[bot.id]['action_label'].configure(text="Action: ") 
@@ -543,7 +543,6 @@ class PokerGUI:
     self._disable_game_controls()
     self.engine.initialise_game()
     pass
-
 
   def _restart_game(self):
     self._disable_game_controls()
